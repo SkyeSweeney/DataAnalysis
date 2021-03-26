@@ -238,17 +238,34 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
 
 static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
 {
-    printf("Login\n");
+    Node_t *pNode;
+    pNode = nodeGet(nodeId);
+    pNode->nodeType = pMsg->hdr.source;
+    printf("Log in from node %d as type %d\n", nodeId);
+    nodeRelease(nodeId);
 }
 
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
 {
-    printf("Logout\n");
+    Node_t *pNode;
+    pNode = nodeGet(nodeId);
+    pNode->nodeType = NODE_NONE;
+    printf("Log out nodeId %d\n", nodeId);
+    nodeRelease(nodeId);
 }
 
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
 {
-    printf("Register\n");
+    MsgId_t msgId;
+    uint16_t add;
+    Node_t *pNode;
+
+    msgId = pMsg->body.reg.msgId;
+    add   = pMsg->body.reg.add;
+    pNode = nodeGet(nodeId);
+    printf("Register %d %d\n", msgId, add);
+    pNode->msgIds[msgId] = add;
+    nodeRelease(nodeId);
 }
 
 static void processExit(NodeId_t nodeId, Msg_t *pMsg)
