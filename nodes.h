@@ -6,7 +6,7 @@
 
 #include "msgs.h"
 
-typedef enum
+typedef enum __attribute__((aligned (2)))
 {
    NODE_NONE   = 0,
    NODE_MASTER = 1,

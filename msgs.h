@@ -9,40 +9,64 @@
 
 typedef enum
 {
-    MSGID_LOGIN,
-    MSGID_LOGOUT,
-    MSGID_REGISTER,
+    MSGID_UNK      = 0,
+    MSGID_LOGIN    = 1,
+    MSGID_LOGOUT   = 2,
+    MSGID_REGISTER = 3,
     MSGID_MAX
 } MsgId_e;
 
 
 #include "nodes.h"
 
+typedef uint16_t MsgId_t;
+typedef uint16_t NodeType_t;
+
+#pragma pack(1)
 typedef struct
 {
-    MsgId_e    msgId;
-    NodeType_e source;
-    uint16_t   length;
+    MsgId_t     msgId;
+    NodeType_t  source;
+    uint16_t    length;
+    uint16_t    spare;
 } MsgHeader_t;
+#pragma pack(0)
+
+
+// Login message. The type you want to login as comes from the header source
+typedef struct
+{
+} BodyLogin_t;
+
+// Logout message. Header only
+typedef struct
+{
+} BodyLogout_t;
+
+typedef struct
+{
+    MsgId_t  nodeType;
+    uint16_t add;
+} BodyRegister;
+
+typedef struct
+{
+    uint8_t donotuse[1024];
+} BodyGeneric;
+
+typedef union
+{
+    BodyLogin_t  login;
+    BodyLogout_t logout;
+    BodyRegister reg;
+    BodyGeneric  generic;
+} Body_t;
 
 typedef struct
 {
     MsgHeader_t hdr;
-    NodeType_e  nodeType;
-} MsgLogin_t;
-
-typedef struct
-{
-    MsgHeader_t hdr;
-    NodeType_e  nodeType;
-} MsgLogout_t;
-
-typedef struct
-{
-    MsgHeader_t hdr;
-    MsgId_e     msgId;
-    uint8_t     add;    // True to add, false to remove
-} MsgRegister_t;
+    Body_t      body;
+} Msg_t;
 
 
 #endif

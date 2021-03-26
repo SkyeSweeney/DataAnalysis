@@ -21,6 +21,7 @@
 Node_t Nodes[NODE_MAX];
 
 void *nodeThread(void *arg);
+void processMsg(Msg_t *pMsg);
 
 void main(int argc, char *argv[])
 {
@@ -33,12 +34,12 @@ void main(int argc, char *argv[])
     uint16_t           nodeId;
 
 
+    // Initialize the Node structure
     for (j=0; j<NODE_MAX; j++)
     {
         Nodes[j].sd = -1;
     }
 
-    
 
     // Open up TCP listen socket
     hubSd = socket(AF_INET, SOCK_STREAM, 0);
@@ -62,8 +63,8 @@ void main(int argc, char *argv[])
         // Accept connection
         printf("Waiting for connection...");
         len = sizeof(from);
-        //nodeSd = accept(hubSd, &from, &len);
-        printf(" Got one!");
+        nodeSd = accept(hubSd, &from, &len);
+        printf(" Got one!\n");
 
         // Find an empty element in the Node structure
         for (nodeId=0; nodeId<NODE_MAX; nodeId++)
@@ -102,74 +103,94 @@ void *nodeThread(void *parg)
 {
 
     uint16_t nodeId;
+    ssize_t n;
+    char msg[1024];
 
     // Get node id from argument
     nodeId = *((uint16_t*)parg);
+    printf("Node %d sd %d\n", nodeId, Nodes[nodeId].sd);
 
     // Do till the connection is closed
     for (;;)
     {
         // Wait for message from node
-        //msg = read(Nodes[nodId].sd, ..);
+        n = read(Nodes[nodeId].sd, (void*)msg, 1024);
+        
+        if (n == 0)
+        {
+            printf("Node closed\n");
+            break;
+        }
 
         // Call message processor
-        //processMsg(msg);
+        processMsg((Msg_t*)msg);
 
-        printf("!\n");
+        //printf("!\n");
         sleep(1);
     }
 }
 
-#if 0
 
-void processMsg(MSG *pMsg)
+void processMsg(Msg_t *pMsg)
 {
+    MsgId_e msgId;
+    NodeType_e src;
+    uint16_t   len;
+    int        ok;
+    int        i;
+
     // Get the source
+    src = pMsg->hdr.source;
+    len = pMsg->hdr.length;
 
     // Get the msgId;
-    msgId = msg.hdr.id;
+    msgId = pMsg->hdr.msgId;
 
     // Switch on type
     switch(msgId)
     {
         // Node asking to join
-        case MSG_ID_LOGIN:
-            doMsgLogin(nodeId, msg);
+        case MSGID_LOGIN:
+            printf("Login\n");
+            //doMsgLogin(nodeId, msg);
             break;
 
         // Node asking to leave
-        case MSG_ID_LOGOUT:
-            doMsgLogout(nodeId, msg);
+        case MSGID_LOGOUT:
+            printf("Logout\n");
+            //doMsgLogout(nodeId, msg);
             break;
 
         // Node registering for a message
-        case MSG_ID_REGISTER:
-            doMsgRegister(nodeId, msg);
+        case MSGID_REGISTER:
+            printf("Register\n");
+            //doMsgRegister(nodeId, msg);
             break; 
 
         default:
 
             // If msgId is legal
-            if (msgId < MAX_MSGS)
+            if (msgId < MSGID_MAX)
             {
+                printf("Message to route %d\n", msgId);
                 // For each node 
-                for (i=0; i<MAX_NODES; i++)
+                for (i=0; i<NODE_MAX; i++)
                 {
                     // Skip unused nodes
-                    if (nodes[i].sd == -1) continue;
+                    if (Nodes[i].sd == -1) continue;
 
                     // If is to be sent
-                    if (nodes[i].msgIds[msgId])
+                    if (Nodes[i].msgIds[msgId])
                     {
 
                         // Attempt to send message
-                        ok = send(Nodes[i].sd, msg);
+                        ok = send(Nodes[i].sd, pMsg, len+6, 0);
 
                         // If it failed, nuke the node
-                        if (!ok)
+                        if (ok != 0)
                         {
                             // Close down node
-                            deleteNode(i);
+                            //deleteNode(i);
                         }
                         
                     }
@@ -177,12 +198,13 @@ void processMsg(MSG *pMsg)
             }
             else
             {
-                print("Someone trying to send us bad message\n");
+                printf("Someone trying to send us bad message %d\n", msgId);
             }
     }
     
 }
 
+#if 0
 
 void sendMsg(msg)
 {
