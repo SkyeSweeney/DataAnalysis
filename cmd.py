@@ -10,6 +10,18 @@ import time
 
 HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT = 5000         # The port used by the server
+src = 1
+som = 0x534b
+
+MSGID_UNK      = 0
+MSGID_LOGIN    = 1
+MSGID_LOGOUT   = 2
+MSGID_EXIT     = 3
+MSGID_REGISTER = 4
+MSGID_FRAME    = 5
+MSGID_LOG      = 6
+MSGID_MAX      = 7
+
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -20,7 +32,7 @@ s.connect((HOST, PORT))
 # msgId = 1 is login
 # src = 1 is cmd node
 # len = 0, for header only
-buf = struct.pack("<HHHH", 0x534B, 1, 2, 0)
+buf = struct.pack("<HHHH", som, MSGID_LOGIN, src, 0)
 s.sendall(buf)
 
 
@@ -31,7 +43,7 @@ s.sendall(buf)
 # Payload
 # 5 - msgId to register
 # 1 - register
-buf = struct.pack("<HHHHHH", 0x534B, 3, 1, 4, 5, 1)
+buf = struct.pack("<HHHHHH", som, MSGID_REGISTER, src, 4, MSGID_LOG, 1)
 s.sendall(buf)
 
 # Spawn off thread to receive messages
@@ -59,7 +71,7 @@ while True:
         frm = 10
         sec = 1234332
         nsec = 1234553
-        buf = struct.pack("<HHHHIII", 0x534B, 4, 1, 12, frm, sec, nsec)
+        buf = struct.pack("<HHHHIII", som, MSGID_FRAME, src, 12, frm, sec, nsec)
 
         # Send command
         s.sendall(buf)
@@ -75,7 +87,7 @@ while True:
 # msgId = 2 is login
 # src = 1 is cdmd node
 # len = 0, for header only
-buf = struct.pack("<HHHH", 0x534B, 2, 1, 0)
+buf = struct.pack("<HHHH", som, MSGID_LOGOUT, src, 0)
 s.sendall(buf)
 
 

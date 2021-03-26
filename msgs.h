@@ -12,9 +12,10 @@ typedef enum
     MSGID_UNK      = 0,
     MSGID_LOGIN    = 1,
     MSGID_LOGOUT   = 2,
-    MSGID_REGISTER = 3,
-    MSGID_FRAME    = 4,
-    MSGID_LOG      = 5,
+    MSGID_EXIT     = 3,
+    MSGID_REGISTER = 4,
+    MSGID_FRAME    = 5,
+    MSGID_LOG      = 6,
     MSGID_MAX
 } MsgId_e;
 

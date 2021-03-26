@@ -18,12 +18,15 @@
 #define PORT 5000
 
 
-void *nodeThread(void *arg);
-void processMsg(Msg_t *pMsg);
+static void *nodeThread(void *arg);
+static void processMsg(NodeId_t nodeId, Msg_t *pMsg);
+static void processLogin(NodeId_t nodeId, Msg_t *pMsg);
+static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
+static void processRegister(NodeId_t nodeId, Msg_t *pMsg);
+static void processExit(NodeId_t nodeId, Msg_t *pMsg);
 
 void main(int argc, char *argv[])
 {
-    int                j;
     int                hubSd;
     int                nodeSd = 0;
     struct sockaddr_in serv_addr; 
@@ -51,17 +54,18 @@ void main(int argc, char *argv[])
     listen(hubSd, 10); 
 
     // Do forever
-    for (j=0; j<5; j++)
+    for (; ; )
     {
 
         // Accept connection
-        printf("Waiting for connection...");
         len = sizeof(from);
         nodeSd = accept(hubSd, &from, &len);
-        printf(" Got one!\n");
+        printf("Got connection from TBD on socket %d\n", nodeSd);
 
+        // Find an empyt control strucure for this node
         nodeId = nodeFindEmpty();
 
+        // If we found an empty spot
         if (nodeId != NODE_MAX)
         {
             // Add to node list
@@ -84,14 +88,11 @@ void main(int argc, char *argv[])
 
     }
 
-    sleep(10);
-
-
 }
 
 
 // pargs points to a NodeId_t
-void *nodeThread(void *parg)
+static void *nodeThread(void *parg)
 {
 
     NodeId_t nodeId;
@@ -145,19 +146,18 @@ void *nodeThread(void *parg)
         }
 
         // Call message processor
-        processMsg(&msg);
+        processMsg(nodeId, &msg);
 
     }
 }
 
 
-void processMsg(Msg_t *pMsg)
+static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
 {
     MsgId_e    msgId;
     NodeType_e src;
     uint16_t   len;
     int        ok;
-    NodeId_t   nodeId;
     Node_t     *pNode;
 
     // Get the source
@@ -172,20 +172,22 @@ void processMsg(Msg_t *pMsg)
     {
         // Node asking to join
         case MSGID_LOGIN:
-            printf("Login\n");
-            //doMsgLogin(nodeId, msg);
+            processLogin(nodeId, pMsg);
             break;
 
         // Node asking to leave
         case MSGID_LOGOUT:
-            printf("Logout\n");
-            //doMsgLogout(nodeId, msg);
+            processLogout(nodeId, pMsg);
             break;
 
         // Node registering for a message
         case MSGID_REGISTER:
-            printf("Register\n");
-            //doMsgRegister(nodeId, msg);
+            processRegister(nodeId, pMsg);
+            break; 
+
+        // Node registering for a message
+        case MSGID_EXIT:
+            processExit(nodeId, pMsg);
             break; 
 
         default:
@@ -221,7 +223,9 @@ void processMsg(Msg_t *pMsg)
                             }
                         }
                     } // Defined node
+
                     nodeRelease(nodeId);
+
                 } // for each node
             }
             else
@@ -232,3 +236,22 @@ void processMsg(Msg_t *pMsg)
     
 }
 
+static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
+{
+    printf("Login\n");
+}
+
+static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
+{
+    printf("Logout\n");
+}
+
+static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
+{
+    printf("Register\n");
+}
+
+static void processExit(NodeId_t nodeId, Msg_t *pMsg)
+{
+    printf("Exit\n");
+}
