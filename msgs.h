@@ -13,6 +13,7 @@ typedef enum
     MSGID_LOGIN    = 1,
     MSGID_LOGOUT   = 2,
     MSGID_REGISTER = 3,
+    MSGID_FRAME    = 4,
     MSGID_MAX
 } MsgId_e;
 
@@ -25,10 +26,10 @@ typedef uint16_t NodeType_t;
 #pragma pack(1)
 typedef struct
 {
+    uint16_t    SOM;    // 0x534b
     MsgId_t     msgId;
     NodeType_t  source;
     uint16_t    length;
-    uint16_t    spare;
 } MsgHeader_t;
 #pragma pack(0)
 
@@ -45,9 +46,16 @@ typedef struct
 
 typedef struct
 {
-    MsgId_t  nodeType;
-    uint16_t add;
+    MsgId_t  msgId;  // ID of message to register
+    uint16_t add;    // non zero to register, 0 to unregister
 } BodyRegister;
+
+typedef struct
+{
+    uint32_t frame;    // Frame number to display
+    uint32_t sec;
+    uint32_t nsec;
+} BodyFrame;
 
 typedef struct
 {
@@ -59,6 +67,7 @@ typedef union
     BodyLogin_t  login;
     BodyLogout_t logout;
     BodyRegister reg;
+    BodyFrame    frame;
     BodyGeneric  generic;
 } Body_t;
 

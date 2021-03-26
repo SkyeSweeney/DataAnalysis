@@ -18,8 +18,6 @@
 #define PORT 5000
 
 
-Node_t Nodes[NODE_MAX];
-
 void *nodeThread(void *arg);
 void processMsg(Msg_t *pMsg);
 
@@ -31,15 +29,11 @@ void main(int argc, char *argv[])
     struct sockaddr_in serv_addr; 
     struct sockaddr    from;
     socklen_t          len;
-    uint16_t           nodeId;
+    NodeId_t           nodeId;
 
 
     // Initialize the Node structure
-    for (j=0; j<NODE_MAX; j++)
-    {
-        Nodes[j].sd = -1;
-    }
-
+    nodesInit();
 
     // Open up TCP listen socket
     hubSd = socket(AF_INET, SOCK_STREAM, 0);
@@ -66,23 +60,20 @@ void main(int argc, char *argv[])
         nodeSd = accept(hubSd, &from, &len);
         printf(" Got one!\n");
 
-        // Find an empty element in the Node structure
-        for (nodeId=0; nodeId<NODE_MAX; nodeId++)
-        {
-            if (Nodes[nodeId].sd == -1) break;
-        }
+        nodeId = nodeFindEmpty();
 
-        if (nodeId < NODE_MAX)
+        if (nodeId != NODE_MAX)
         {
             // Add to node list
-            Nodes[nodeId].sd       = nodeSd;
-            Nodes[nodeId].nodeType = NODE_NONE;
+            Node_t *pNode;
+            pNode = nodeGet(nodeId);
+            pNode->sd       = nodeSd;
+            pNode->nodeType = NODE_NONE;
+            nodeRelease(nodeId);
 
-            // Spawn off thread to handle it
+            // Spawn off thread to handle it passing in the nodeId
             pthread_t threadId;
-            void *pargs;
-            pargs = (void*)&nodeId;
-            pthread_create(&threadId, NULL, nodeThread, pargs);
+            pthread_create(&threadId, NULL, nodeThread, (void*)&nodeId);
     
         } 
         else 
@@ -99,22 +90,32 @@ void main(int argc, char *argv[])
 }
 
 
+// pargs points to a NodeId_t
 void *nodeThread(void *parg)
 {
 
-    uint16_t nodeId;
-    ssize_t n;
-    char msg[1024];
+    NodeId_t nodeId;
+    int      sd;
+    ssize_t  n;
+    Msg_t    msg;
+    Node_t  *pNode;
 
     // Get node id from argument
-    nodeId = *((uint16_t*)parg);
-    printf("Node %d sd %d\n", nodeId, Nodes[nodeId].sd);
+    nodeId = *((NodeId_t*)parg);
+
+    // Get the socket we are to use
+    pNode = nodeGet(nodeId);
+    sd = pNode->sd;
+    nodeRelease(nodeId);
+
+    printf("Node %d sd %d\n", nodeId, sd);
 
     // Do till the connection is closed
     for (;;)
     {
-        // Wait for message from node
-        n = read(Nodes[nodeId].sd, (void*)msg, 1024);
+
+        // Read the next header into the message buffer
+        n = read(sd, (void*)(&msg.hdr), sizeof(MsgHeader_t));
         
         if (n == 0)
         {
@@ -122,22 +123,42 @@ void *nodeThread(void *parg)
             break;
         }
 
-        // Call message processor
-        processMsg((Msg_t*)msg);
+        // Verify header
+        if (msg.hdr.SOM != 0x534b)
+        {
+            // Flush buffer and hope for the best
+            continue;
+        }
 
-        //printf("!\n");
-        sleep(1);
+        // If we have a body
+        if (msg.hdr.length > 0)
+        {
+
+            // Read body
+            n = read(sd, (void*)(&msg.body), msg.hdr.length);
+        
+            if (n == 0)
+            {
+                printf("Node closed\n");
+                break;
+            }
+        }
+
+        // Call message processor
+        processMsg(&msg);
+
     }
 }
 
 
 void processMsg(Msg_t *pMsg)
 {
-    MsgId_e msgId;
+    MsgId_e    msgId;
     NodeType_e src;
     uint16_t   len;
     int        ok;
-    int        i;
+    NodeId_t   nodeId;
+    Node_t     *pNode;
 
     // Get the source
     src = pMsg->hdr.source;
@@ -169,32 +190,39 @@ void processMsg(Msg_t *pMsg)
 
         default:
 
+
             // If msgId is legal
             if (msgId < MSGID_MAX)
             {
                 printf("Message to route %d\n", msgId);
-                // For each node 
-                for (i=0; i<NODE_MAX; i++)
-                {
-                    // Skip unused nodes
-                    if (Nodes[i].sd == -1) continue;
 
-                    // If is to be sent
-                    if (Nodes[i].msgIds[msgId])
+                // For each node 
+                for (nodeId=0; nodeId<NODE_MAX; nodeId++)
+                {
+
+                    pNode = nodeGet(nodeId);
+
+                    // If a defined node
+                    if (pNode->sd != -1)
                     {
 
-                        // Attempt to send message
-                        ok = send(Nodes[i].sd, pMsg, len+6, 0);
-
-                        // If it failed, nuke the node
-                        if (ok != 0)
+                        // If is to be sent
+                        if (pNode->msgIds[msgId])
                         {
-                            // Close down node
-                            //deleteNode(i);
+
+                            // Attempt to send message
+                            ok = send(pNode->sd, pMsg, len+6, 0);
+    
+                            // If it failed, nuke the node
+                            if (ok != 0)
+                            {
+                                // Close down node
+                                //deleteNode(i);
+                            }
                         }
-                        
-                    }
-                }
+                    } // Defined node
+                    nodeRelease(nodeId);
+                } // for each node
             }
             else
             {
@@ -204,25 +232,3 @@ void processMsg(Msg_t *pMsg)
     
 }
 
-#if 0
-
-void sendMsg(msg)
-{
-    msgId = msg.hdr.id;
-    
-    // if this message is needed by someone
-    if (registered(msgId))
-    {
-
-
-    }
-
-}
-
-
-
-void connectionThread(void)
-{
-}
-
-#endif
