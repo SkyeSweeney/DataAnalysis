@@ -14,6 +14,7 @@ typedef enum
     MSGID_LOGOUT   = 2,
     MSGID_REGISTER = 3,
     MSGID_FRAME    = 4,
+    MSGID_LOG      = 5,
     MSGID_MAX
 } MsgId_e;
 
@@ -59,6 +60,13 @@ typedef struct
 
 typedef struct
 {
+    uint32_t ts;
+    uint8_t  level;
+    char     string[1000];
+} BodyLog;
+
+typedef struct
+{
     uint8_t donotuse[1024];
 } BodyGeneric;
 
@@ -68,6 +76,7 @@ typedef union
     BodyLogout_t logout;
     BodyRegister reg;
     BodyFrame    frame;
+    BodyLog      log;
     BodyGeneric  generic;
 } Body_t;
 
