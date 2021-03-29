@@ -50,35 +50,35 @@ typedef struct
 {
     MsgId_t  msgId;  // ID of message to register
     uint16_t add;    // non zero to register, 0 to unregister
-} BodyRegister;
+} BodyRegister_t;
 
 typedef struct
 {
     uint32_t frame;    // Frame number to display
     uint32_t sec;
     uint32_t nsec;
-} BodyFrame;
+} BodyFrame_t;
 
 typedef struct
 {
     uint32_t ts;
     uint8_t  level;
     char     string[1000];
-} BodyLog;
+} BodyLog_t;
 
 typedef struct
 {
     uint8_t donotuse[1024];
-} BodyGeneric;
+} BodyGeneric_t;
 
 typedef union
 {
-    BodyLogin_t  login;
-    BodyLogout_t logout;
-    BodyRegister reg;
-    BodyFrame    frame;
-    BodyLog      log;
-    BodyGeneric  generic;
+    BodyLogin_t    login;
+    BodyLogout_t   logout;
+    BodyRegister_t reg;
+    BodyFrame_t    frame;
+    BodyLog_t      log;
+    BodyGeneric_t  generic;
 } Body_t;
 
 typedef struct

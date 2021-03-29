@@ -13,9 +13,8 @@
 
 #include "msgs.h"
 #include "nodes.h"
+#include "hub_if.h"
 
-
-#define PORT 5000
 
 
 static void *nodeThread(void *arg);
@@ -25,7 +24,7 @@ static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg);
 static void processExit(NodeId_t nodeId, Msg_t *pMsg);
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int                hubSd;
     int                nodeSd = 0;
@@ -45,7 +44,7 @@ void main(int argc, char *argv[])
     memset(&serv_addr, '0', sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(PORT); 
+    serv_addr.sin_port = htons(HUB_PORT); 
 
     // Bind to address
     bind(hubSd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
@@ -149,6 +148,8 @@ static void *nodeThread(void *parg)
         processMsg(nodeId, &msg);
 
     }
+
+    return NULL;
 }
 
 
@@ -213,6 +214,7 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
                         {
 
                             // Attempt to send message
+                            printf("Sending\n");
                             ok = send(pNode->sd, pMsg, len+6, 0);
     
                             // If it failed, nuke the node
@@ -241,7 +243,7 @@ static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
     Node_t *pNode;
     pNode = nodeGet(nodeId);
     pNode->nodeType = pMsg->hdr.source;
-    printf("Log in from node %d as type %d\n", nodeId);
+    printf("Log in from node %d as type %d\n", nodeId, pMsg->hdr.source);
     nodeRelease(nodeId);
 }
 
