@@ -16,6 +16,7 @@ typedef enum
     MSGID_REGISTER = 4,
     MSGID_FRAME    = 5,
     MSGID_LOG      = 6,
+    MSGID_CONFIG   = 7,
     MSGID_MAX
 } MsgId_e;
 
@@ -55,16 +56,23 @@ typedef struct
 typedef struct
 {
     uint32_t frame;    // Frame number to display
-    uint32_t sec;
-    uint32_t nsec;
+    uint32_t sec;      // Whole seconds since 1970
+    uint32_t nsec;     // nano seconds into second
 } BodyFrame_t;
 
 typedef struct
 {
-    uint32_t ts;
+    uint32_t sec;
+    uint32_t nsec;
     uint8_t  level;
     char     string[1000];
 } BodyLog_t;
+
+typedef struct
+{
+    char     videoDir[256]; // Directory where video files can be found
+    char     videoRoot[24]; // Root file name of video files
+} BodyConfig_t;
 
 typedef struct
 {
@@ -78,6 +86,7 @@ typedef union
     BodyRegister_t reg;
     BodyFrame_t    frame;
     BodyLog_t      log;
+    BodyConfig_t   config;
     BodyGeneric_t  generic;
 } Body_t;
 

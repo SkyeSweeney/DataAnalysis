@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         nodeSd = accept(hubSd, &from, &len);
         printf("Got connection from TBD on socket %d\n", nodeSd);
 
-        // Find an empyt control strucure for this node
+        // Find an empty control strucure for this node
         nodeId = nodeFindEmpty();
 
         // If we found an empty spot
@@ -74,7 +74,8 @@ int main(int argc, char *argv[])
             pNode->nodeType = NODE_NONE;
             nodeRelease(nodeId);
 
-            // Spawn off thread to handle it passing in the nodeId
+            // Spawn off thread to handle incomming messages.
+            // Pass it in the node id so it knows who its talking to.
             pthread_t threadId;
             pthread_create(&threadId, NULL, nodeThread, (void*)&nodeId);
     
@@ -90,7 +91,8 @@ int main(int argc, char *argv[])
 }
 
 
-// pargs points to a NodeId_t
+// Thread to handle incoming messages from one node
+// The nodeId of the node we are handling is passed in vias parg
 static void *nodeThread(void *parg)
 {
 

@@ -25,6 +25,9 @@ int main(int argc, char *argv[])
 
 void cbFrame(Msg_t *pMsg)
 {
-    printf("Got a Frame\n");
+    printf("Got a Frame: %u sec:%u nsec:%u\n",
+           pMsg->body.frame.frame,
+           pMsg->body.frame.sec,
+           pMsg->body.frame.nsec);
 }
 

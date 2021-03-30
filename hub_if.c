@@ -153,15 +153,18 @@ static void * hubif_receiveThread(void *arg)
         // Check header
         if (msg.hdr.SOM != 0x534B)
         {
-            // For now jsut hope next read works
+            // For now just hope next read works
+            // Should really read byte by byte till we find the SOM
             continue;
         }
+
+        // Get the message ID and size
+        msgId = msg.hdr.msgId;
         n = msg.hdr.length;
+        printf("Body size if %d\n", n);
 
         // Read body
         err = read(m_sockfd, (void*)&msg.body, n);
-
-        msgId = msg.hdr.msgId;
 
         // If a valid message id
         if (msgId < MSGID_MAX)
