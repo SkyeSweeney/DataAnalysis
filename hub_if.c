@@ -23,6 +23,7 @@ static void * hubif_receiveThread(void *arg);
 
 int m_sockfd;
 pthread_t m_thread_id;
+NodeId_t m_nodeId = NODE_NONE;
 
 void (*m_callbacks[MSGID_MAX])(Msg_t *pMsg);
 
@@ -80,7 +81,6 @@ int hubif_client_init(void)
 }
 
 
-NodeId_t m_nodeId = NODE_NONE;
 
 int hubif_login(NodeId_t nodeId)
 {
@@ -91,6 +91,18 @@ int hubif_login(NodeId_t nodeId)
     msg.hdr.length = 0;
     hubif_send(&msg);
     m_nodeId = nodeId;
+    return 0;
+}
+
+int hubif_logout(NodeId_t nodeId)
+{
+    Msg_t msg;
+    msg.hdr.SOM = 0x534B;
+    msg.hdr.msgId = MSGID_LOGOUT;
+    msg.hdr.source = nodeId;
+    msg.hdr.length = 0;
+    hubif_send(&msg);
+    m_nodeId = NODE_NONE;
     return 0;
 }
 

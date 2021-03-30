@@ -10,6 +10,10 @@
 #include <string.h>
 #include <sys/types.h>
 #include <time.h> 
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+
 
 #include "msgs.h"
 #include "nodes.h"
@@ -18,6 +22,7 @@
 
 
 static void *nodeThread(void *arg);
+static void *userThread(void *parg);
 static void processMsg(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogin(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
@@ -36,6 +41,9 @@ int main(int argc, char *argv[])
 
     // Initialize the Node structure
     nodesInit();
+
+    pthread_t userThreadId;
+    pthread_create(&userThreadId, NULL, userThread, NULL);
 
     // Open up TCP listen socket
     hubSd = socket(AF_INET, SOCK_STREAM, 0);
@@ -88,6 +96,47 @@ int main(int argc, char *argv[])
 
     }
 
+}
+
+
+static void *userThread(void *parg)
+{
+
+    int i;
+    Node_t  *pNode;
+    char    *pCmdBuf;
+
+    for (;;)
+    {
+        // Get a user command
+        pCmdBuf = readline("Cmd> ");
+
+        // Parse command
+
+        // Switch based on command
+        switch(1)
+        {
+            case 1:
+
+                printf("| id | sd  | NodeType |\n");
+                for (i=0; i<NODE_MAX; i++)
+                {
+                    // Get the socket we are to use
+                    pNode = nodeGet(i);
+                    printf("| %02d | %03d | %s |\n", 
+                           i, 
+                           pNode->sd, 
+                           nodeIdToName(pNode->nodeType));
+                    nodeRelease(i);
+                }
+                break;
+            default:
+                break;
+        }
+        free(pCmdBuf);
+
+    }
+    return NULL;
 }
 
 
@@ -253,6 +302,7 @@ static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
 {
     Node_t *pNode;
     pNode = nodeGet(nodeId);
+    pNode->sd = -1;
     pNode->nodeType = NODE_NONE;
     printf("Log out nodeId %d\n", nodeId);
     nodeRelease(nodeId);

@@ -13,6 +13,7 @@ typedef enum __attribute__((aligned (2)))
    NODE_CMD    = 1,
    NODE_VIDEO  = 2,
    NODE_MAP    = 3,
+   NODE_TIME   = 4,
    NODE_MAX
 } NodeType_e;
 
@@ -33,6 +34,7 @@ void nodeInit(NodeId_t iNode);
 int  nodeFindEmpty(void);
 Node_t *nodeGet(NodeId_t nodeId);
 void nodeRelease(NodeId_t nodeId);
+char *nodeIdToName(NodeId_t nodeId);
 
 
 

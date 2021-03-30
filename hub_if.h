@@ -14,6 +14,8 @@ int hubif_client_init(void);
 
 int hubif_login(NodeId_t nodeId);
 
+int hubif_logout(NodeId_t nodeId);
+
 int hubif_register(MsgId_t msgid, void (*cb)(Msg_t *msg));
 
 int hubif_unregister(MsgId_t msgid);

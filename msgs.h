@@ -17,6 +17,8 @@ typedef enum
     MSGID_FRAME    = 5,
     MSGID_LOG      = 6,
     MSGID_CONFIG   = 7,
+    MSGID_LOCATION = 8,
+    MSGID_TIME     = 9,
     MSGID_MAX
 } MsgId_e;
 
@@ -76,6 +78,21 @@ typedef struct
 
 typedef struct
 {
+    double   northing;
+    double   easting;
+    double   altitude;
+    double   speed;
+    double   heading;
+} BodyLocation_t;
+
+typedef struct
+{
+    uint32_t  sec;
+    uint32_t  nsec;
+} BodyTime_t;
+
+typedef struct
+{
     uint8_t donotuse[1024];
 } BodyGeneric_t;
 
@@ -87,6 +104,8 @@ typedef union
     BodyFrame_t    frame;
     BodyLog_t      log;
     BodyConfig_t   config;
+    BodyLocation_t location;
+    BodyTime_t     time;
     BodyGeneric_t  generic;
 } Body_t;
 

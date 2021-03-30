@@ -57,3 +57,32 @@ void nodeRelease(NodeId_t nodeId)
     pthread_mutex_unlock(&m_nodes[nodeId].mutex);
 }
 
+char *nodeIdToName(NodeId_t nodeId)
+{
+    char * retval = "Unknown";
+
+    switch (nodeId)
+    {
+ 
+        case NODE_NONE:
+            retval = "None";
+            break;
+        case NODE_CMD:
+            retval = "Command";
+            break;
+        case NODE_VIDEO:
+            retval = "Video";
+            break;
+        case NODE_MAP:
+            retval = "Map";
+            break;
+        case NODE_TIME:
+            retval = "Time";
+            break;
+        default:
+            retval = "Unknown";
+            break;
+    }
+    return retval;
+}
+

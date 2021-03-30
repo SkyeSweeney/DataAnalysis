@@ -4,7 +4,7 @@
 all: hub video cmd
 
 hub: hub.o nodes.o
-	gcc -Wall -o hub -g -lpthread hub.c nodes.o
+	gcc -Wall -o hub -g -lreadline -lpthread hub.c nodes.o
 
 video: video.o nodes.o hub_if.o
 	gcc -Wall -o video -g -lpthread video.c nodes.o hub_if.o
