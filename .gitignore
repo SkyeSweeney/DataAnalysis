@@ -1,3 +1,5 @@
 hub
+cmd
+video
 *.o
 *.swp
