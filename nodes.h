@@ -34,7 +34,7 @@ void nodeInit(NodeId_t iNode);
 int  nodeFindEmpty(void);
 Node_t *nodeGet(NodeId_t nodeId);
 void nodeRelease(NodeId_t nodeId);
-char *nodeIdToName(NodeId_t nodeId);
+const char *nodeIdToName(NodeId_t nodeId);
 
 
 

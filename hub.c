@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <pthread.h>
 
 
 #include "msgs.h"
@@ -207,17 +208,15 @@ static void *nodeThread(void *parg)
 static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
 {
     MsgId_e    msgId;
-    NodeType_e src;
     uint16_t   len;
     int        ok;
     Node_t     *pNode;
 
     // Get the source
-    src = pMsg->hdr.source;
     len = pMsg->hdr.length;
 
     // Get the msgId;
-    msgId = pMsg->hdr.msgId;
+    msgId = (MsgId_e)pMsg->hdr.msgId;
 
     // Switch on type
     switch(msgId)
@@ -293,7 +292,7 @@ static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
 {
     Node_t *pNode;
     pNode = nodeGet(nodeId);
-    pNode->nodeType = pMsg->hdr.source;
+    pNode->nodeType = (NodeType_e)pMsg->hdr.source;
     printf("Log in from node %d as type %d\n", nodeId, pMsg->hdr.source);
     nodeRelease(nodeId);
 }

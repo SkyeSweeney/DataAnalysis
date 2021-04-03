@@ -4,22 +4,29 @@
 all: hub video cmd
 
 hub: hub.o nodes.o
-	gcc -Wall -o hub -g -lreadline -lpthread hub.c nodes.o
+	g++ -Wall -g -o hub -pthread -lreadline hub.o nodes.o -lreadline
 
 video: video.o nodes.o hub_if.o
-	gcc -Wall -o video -g -lpthread video.c nodes.o hub_if.o
+	g++ -Wall -o video -g -pthread video.o nodes.o hub_if.o
 
 cmd: cmd.o nodes.o hub_if.o
-	gcc -Wall -o cmd -g -lreadline -lpthread cmd.c nodes.o hub_if.o
+	g++ -Wall -o cmd -g  cmd.c nodes.o hub_if.o -lreadline -pthread
+
 
 hub.o: hub.c msgs.h nodes.h
-	gcc -Wall -c -g hub.c
+	g++ -Wall -pthread -c -g hub.c
+
+video.o: video.c msgs.h nodes.h
+	g++ -Wall -pthread -c -g video.c
+
+cmd.o: cmd.c msgs.h nodes.h
+	g++ -Wall -pthread -c -g cmd.c
 
 nodes.o: nodes.c nodes.h
-	gcc -Wall -c -g nodes.c
+	g++ -Wall -c -g nodes.c
 
 hub_if.o: hub_if.c msgs.h nodes.h
-	gcc -Wall -c -g hub_if.c
+	g++ -Wall -c -g hub_if.c
 
 clean:
 	rm -f *.o

@@ -161,6 +161,7 @@ static void * hubif_receiveThread(void *arg)
 
         // Read header
         err = read(m_sockfd, (void*)&msg.hdr, sizeof(MsgHeader_t));
+        (void)err;
 
         // Check header
         if (msg.hdr.SOM != 0x534B)
@@ -177,6 +178,7 @@ static void * hubif_receiveThread(void *arg)
 
         // Read body
         err = read(m_sockfd, (void*)&msg.body, n);
+        (void)err;
 
         // If a valid message id
         if (msgId < MSGID_MAX)

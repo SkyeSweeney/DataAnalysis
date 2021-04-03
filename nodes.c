@@ -57,9 +57,9 @@ void nodeRelease(NodeId_t nodeId)
     pthread_mutex_unlock(&m_nodes[nodeId].mutex);
 }
 
-char *nodeIdToName(NodeId_t nodeId)
+const char *nodeIdToName(NodeId_t nodeId)
 {
-    char * retval = "Unknown";
+    const char * retval = "Unknown";
 
     switch (nodeId)
     {
