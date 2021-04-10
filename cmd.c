@@ -19,6 +19,8 @@ static int run = 1;
 static char *tokens[20];
 static uint16_t nToks;
 
+BodyTest_t qwqw;
+
 int main(int argc, char *argv[])
 {
     char *pCmdBuf;

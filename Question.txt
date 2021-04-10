@@ -1,0 +1,49 @@
+Here is a software problem I have been wrestling with for a few weeks.
+Last night it keep me from sleeping. I hope that perhaps someone has done
+something similar. Unfortunately, it does some exposition.
+
+My robot collects data from various sensors and logs that data to an SD card.
+It also logs some intermediate data as well. The data is logged in discrete
+messages. Each message stores a unique type of data. I have a GPS-NAV message
+that records lat/lon/alt, one that records the demanded motor speed, etc.
+
+Each of these messages may be of different sizes but they all include a fixed
+size header. The header includes a ID that specifies the message type, as
+well as the size of the body of the message. The body of any message is
+"POD" (Plain Old Data) and no C++ class objects or anything weird. Just stuff
+that can be defined as a simple C structure.
+
+After a robot run, I have an SD card with 3+ gigs of log data that I want to
+review. In the past I wrote a Python program to read the file and convert it
+into a CSV file. By Excel is not the right tool to analze the date. Neither 
+is R. I have come to accept I need to write a custom program.
+
+This program should allow me to replay the data like a VCR with Play, Stop,
+and single step. The user should be allowed to specify variables from any of
+the messages to either plot against another variable (x-y plot) or against 
+time (script chart recorder).
+
+The problem is one of maintenance. As the robot project evolves, so will the
+messages. New ones might be created and old ones deleted or modified. Now I
+have to edit not only the robot program that creates the data but also the
+data analysis software that read that data.
+
+And if suddenly I need to replay data what is old, the new analysis program
+might not work.
+
+So I am contiplating a way to make the analysis program somewhat agnostic to
+the C structs that define the messages. Perhaps an INI or XML file that defines
+the structure. It would have the variable name, message ID, offset into the 
+message, and varaible type (int, float, ...).
+
+When I run the analysis program I would simply need to pass it the right
+version of this definition file to have things work. 
+
+Sounds great, but the details are killers.
+1) Is there an existing way to convert a C struct into an INI/XML file? I would 
+   hate to have to manually create and update these files. Having to write
+   a parser even for the limited vocabulary of a struct seems danting
+   especially if you include unions and bit fields.
+2) Given that file, is it at all possible to parse the data i(from C) in 
+   anything aproaching real time?
+
