@@ -2,64 +2,6 @@
 
 import sys
 
-########################################################################
-# Create a tree of nodes
-########################################################################
-class Node:
-
-    ####################################################################
-    # Constructor for a new node.
-    # A node gets a name, some data, and a pointer to its parent
-    # It also gets a null list of children
-    ####################################################################
-    def __init__(self, name, data, parent):
-        self.name     = name 
-        self.data     = data
-        self.children = []      # List of children nodes
-        self.parent   = parent  # Parent node
-    #
-
-    ####################################################################
-    # getParent
-    ####################################################################
-    def getParent(self):
-        return self.parent
-    #
-
-    ####################################################################
-    # addChild
-    ####################################################################
-    def addChild(self, name, data):
-        child = Node(name, data, self)
-        self.children.append(child)
-        return child
-    #
-
-    ####################################################################
-    #
-    ####################################################################
-    def setName(self, name):
-        self.name = name
-    #
-
-    ####################################################################
-    #
-    ####################################################################
-    def setData(self, data):
-        self.data = data
-    #
-
-    ####################################################################
-    # Convert to string
-    ####################################################################
-    def __str__(self):
-        s = "Name:%s " % (self.name)
-        s += "Children:%d " % (len(self.children))
-        return s
-    #
-
-#
-
 
 
 
@@ -170,7 +112,9 @@ class App:
                 #
 
                 # Add a child node to the parent node
-                node = node.addChild("%d"%level, tag)
+                node = node.addChild("Level%d"%level, tag)
+                parent = node.parent
+                #print(level, len(parent.children))
 
                 lastLevel = level
 
@@ -204,12 +148,28 @@ class App:
             tag
             self.dictTags[tag.getId()] = tag
         except:
-            print("bang")
             pass
         #
 
-        for add, tag in self.dictTags.items():
-            print(str(tag))
+        # Go through tags and llok for those thise Bodyxxx
+        if (False):
+            for add, tag in self.dictTags.items():
+                if (tag.getTagId() == Tag.DW_TAG_structure_type):
+                    for att in tag.listAtt:
+                        if (att.attId == 18):
+                            if (att.attValue[0:4] == "Body"):
+                                print(str(att))
+
+        # Lets walk the tree looking for Bodyxxx
+        print(str(root))
+        for node0 in root.children:
+            for  node1 in node0.children:
+                tag = node1.data
+                if (tag.tagId == Tag.DW_TAG_structure_type):
+                    for att in tag.listAtt:
+                        if(att.attId  == Att.DW_AT_name):
+                            if ("Body" in att.attValue):
+                                print(str(tag))
     #
 
 
@@ -450,6 +410,65 @@ class Att:
 
         return "DW_AT_null"
     #
+#
+
+########################################################################
+# Create a tree of nodes
+########################################################################
+class Node:
+
+    ####################################################################
+    # Constructor for a new node.
+    # A node gets a name, some data, and a pointer to its parent
+    # It also gets a null list of children
+    ####################################################################
+    def __init__(self, name, data, parent):
+        self.name     = name 
+        self.data     = data
+        self.children = []      # List of children nodes
+        self.parent   = parent  # Parent node
+    #
+
+    ####################################################################
+    # getParent
+    ####################################################################
+    def getParent(self):
+        return self.parent
+    #
+
+    ####################################################################
+    # addChild
+    ####################################################################
+    def addChild(self, name, data):
+        child = Node(name, data, self)
+        self.children.append(child)
+        return child
+    #
+
+    ####################################################################
+    #
+    ####################################################################
+    def setName(self, name):
+        self.name = name
+    #
+
+    ####################################################################
+    #
+    ####################################################################
+    def setData(self, data):
+        self.data = data
+    #
+
+    ####################################################################
+    # Convert to string
+    ####################################################################
+    def __str__(self):
+        s = "Name:%s " % (self.name)
+        s += "Children:%d " % (len(self.children))
+        s += "Data:%s " % (str(self.data))
+        return s
+    #
+
 #
 
 if __name__ == "__main__":
