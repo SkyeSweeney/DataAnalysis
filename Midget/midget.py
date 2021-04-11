@@ -17,7 +17,7 @@ class App:
         self.fn = fn
         self.out = "qqq.ini"
 
-        self.dictTags = {} # Dictionary of all tags
+        self.Tags = {} # Dictionary of all tags
     #
 
     ####################################################################
@@ -26,7 +26,7 @@ class App:
     def main(self):
 
         fin = open(self.fn, "r")
-        fout = open(self.out, "w")
+        #fout = open(self.out, "w")
 
         # This is the top of the tree
         root = Node("Root", None, None)
@@ -69,7 +69,7 @@ class App:
                 # Save the accumulated tag and its attributes 
                 # to the dictionary of tags
                 try:
-                    self.dictTags[tag.getTagAdd()] = tag
+                    self.Tags[tag.getTagAdd()] = tag
                 except:
                     pass
                 #
@@ -146,30 +146,111 @@ class App:
         # to the dictionary of tags
         try:
             tag
-            self.dictTags[tag.getId()] = tag
+            self.Tags[tag.getId()] = tag
         except:
             pass
         #
 
-        # Go through tags and llok for those thise Bodyxxx
+        # Go through tags and look for those with Bodyxxx
         if (False):
-            for add, tag in self.dictTags.items():
+            for add, tag in self.Tags.items():
                 if (tag.getTagId() == Tag.DW_TAG_structure_type):
-                    for att in tag.listAtt:
-                        if (att.attId == 18):
-                            if (att.attValue[0:4] == "Body"):
-                                print(str(att))
+                    att = tag.attributes[18]
+                    if (att.value[0:4] == "Body"):
+                        print(str(att))
 
         # Lets walk the tree looking for Bodyxxx
-        print(str(root))
-        for node0 in root.children:
-            for  node1 in node0.children:
-                tag = node1.data
-                if (tag.tagId == Tag.DW_TAG_structure_type):
-                    for att in tag.listAtt:
-                        if(att.attId  == Att.DW_AT_name):
-                            if ("Body" in att.attValue):
-                                print(str(tag))
+        if (False):
+            print(str(root))
+            for node0 in root.children:
+                for node1 in node0.children:
+                    tag = node1.data
+                    if (tag.id == Tag.DW_TAG_structure_type):
+                        att = tag.attributes[Att.DW_AT_name]
+                        if ("Body" in att.value):
+                            print(str(tag))
+                        #
+                    #
+                #
+            #
+        #
+
+
+        # Look for a struct
+        foundNode = self.findInTree(root, 
+                            Tag.DW_TAG_structure_type, 
+                            Att.DW_AT_name, 
+                            "BodyFrame_s")
+
+        if (foundNode == None):
+            print("Not Found")
+        else:
+            tag = foundNode.data
+            print("Size: %s" % (tag.attributes[Att.DW_AT_byte_size].value))
+        #
+        
+        # For each item in the structure
+        for childNode in foundNode.children:
+            tag = childNode.data
+            print("  name: %s" % (tag.attributes[Att.DW_AT_name].value))
+            typeAdd = tag.attributes[Att.DW_AT_type].value
+            typeAdd = self.debracket(typeAdd)
+            typeTag = self.Tags[typeAdd]
+            typeValue = typeTag.attributes[Att.DW_AT_name].value
+            print("  type: %s" % typeValue)
+        #
+
+    #
+
+    ####################################################################
+    #
+    ####################################################################
+    def findInTree(self, node, tagId, attId, attValue):
+
+        # Get the data for this node
+        tag = node.data
+
+        # If has data
+        if (tag != None):
+
+            # If this tag is the right one
+            if (tag.id == tagId):
+
+                # Get attribute
+                try:
+                    att = tag.attributes[attId]
+                    # If it is the right value
+                    if (att.value == attValue):
+                        return node
+                    #
+                except:
+                    pass
+
+
+            #
+        #
+
+        # If we got here, this is not the right Tag, so try children
+        for child in node.children:
+            found = self.findInTree(child, tagId, attId, attValue)
+            if (found):
+                return found
+            #
+        #
+
+        return None
+
+    #
+
+    ####################################################################
+    #
+    ####################################################################
+    def printTree(self, node):
+        print(node.name, str(node.data))
+        # Now print the child nodes
+        for n in node.children:
+            self.printTree(n)
+        #
     #
 
 
@@ -224,24 +305,24 @@ class Tag:
     ####################################################################
     #
     ####################################################################
-    def __init__(self, add, tagName):
+    def __init__(self, add, name):
         self.add          = add   # Address of tag
-        self.tagId        = self.nameToId(tagName) # Tag ID from above list
-        self.listAtt      = []    # List of Att objects for Tag
+        self.id           = self.nameToId(name) # Tag ID from above list
+        self.attributes   = {}    # Dictionary of Attributes by attId
     #
 
     ####################################################################
     #
     ####################################################################
-    def setTagId(self, tagId):
-        self.tagId  = tagId # Tag ID from above list
+    def setTagId(self, id):
+        self.id  = id # Tag ID from above list
     #
 
     ####################################################################
     #
     ####################################################################
     def getTagId(self):
-        return self.tagId
+        return self.id
     #
 
     ####################################################################
@@ -255,7 +336,7 @@ class Tag:
     #
     ####################################################################
     def addAtt(self, att):
-        self.listAtt.append(att)
+        self.attributes[att.id] = att
     #
 
     ####################################################################
@@ -269,12 +350,12 @@ class Tag:
     #
     ####################################################################
     def __str__(self):
-        s = "Add:%x " % (self.add)
-        s = "Tag:%s(%d) " % (self.idToName(self.tagId), self.tagId)
-        s += "NumAtt:%d " % (len(self.listAtt))
+        s = "TAG Add:%x " % (self.add)
+        s += "Tag:%s(%d) " % (self.idToName(self.id), self.id)
+        s += "NumAtt:%d " % (len(self.attributes))
         s += '\n'
-        for i in range(len(self.listAtt)):
-            s += "  " + str(self.listAtt[i]) + '\n'
+        for key,value in self.attributes.items():
+            s += "  " + str(value) + '\n'
         #
         return s
     #
@@ -295,10 +376,10 @@ class Tag:
     ####################################################################
     #
     ####################################################################
-    def idToName(self, tagId):
+    def idToName(self, id):
 
         for key,value in self.DW_TAG.items():
-            if (value == tagId):
+            if (value == id):
                 return key
             #
         #
@@ -370,18 +451,18 @@ class Att:
     ####################################################################
     #
     ####################################################################
-    def __init__(self, attName, attValue):
-        self.attId    = self.nameToId(attName)
-        self.attValue = attValue
+    def __init__(self, attName, value):
+        self.id    = self.nameToId(attName)
+        self.value = value
     #
 
     ####################################################################
     #
     ####################################################################
     def __str__(self):
-        return "Att %s(%d) Value=%s" % (self.idToName(self.attId), 
-                                        self.attId, 
-                                        str(self.attValue))
+        return "ATT %s(%d) Value=%s" % (self.idToName(self.id), 
+                                        self.id, 
+                                        str(self.value))
     #
 
     ####################################################################
@@ -400,10 +481,10 @@ class Att:
     ####################################################################
     #
     ####################################################################
-    def idToName(self, attId):
+    def idToName(self, id):
 
         for key,value in self.DW_AT.items():
-            if (value == attId):
+            if (value == id):
                 return key
             #
         #
@@ -463,7 +544,7 @@ class Node:
     # Convert to string
     ####################################################################
     def __str__(self):
-        s = "Name:%s " % (self.name)
+        s = "NODE Name:%s " % (self.name)
         s += "Children:%d " % (len(self.children))
         s += "Data:%s " % (str(self.data))
         return s
