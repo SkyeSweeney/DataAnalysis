@@ -1,17 +1,18 @@
 #! /usr/bin/python
 
 import sys
+import re
 
 
 
 
 ########################################################################
-#
+# Main application class
 ########################################################################
 class App:
 
     ####################################################################
-    #
+    # Constructor
     ####################################################################
     def __init__(self, fn):
         self.fn = fn
@@ -21,7 +22,7 @@ class App:
     #
 
     ####################################################################
-    #
+    # Main entry
     ####################################################################
     def main(self):
 
@@ -159,51 +160,124 @@ class App:
                     if (att.value[0:4] == "Body"):
                         print(str(att))
 
-        # Lets walk the tree looking for Bodyxxx
-        if (False):
-            print(str(root))
-            for node0 in root.children:
-                for node1 in node0.children:
-                    tag = node1.data
-                    if (tag.id == Tag.DW_TAG_structure_type):
-                        att = tag.attributes[Att.DW_AT_name]
-                        if ("Body" in att.value):
-                            print(str(tag))
-                        #
-                    #
+
+        # Lets find the top node for the "master.c" compilation unit
+        top = self.findInTree(root, 
+                               Tag.DW_TAG_compile_unit, 
+                               Att.DW_AT_name, 
+                               "master.c")
+
+        if (top == None):
+            print("Unable to find a compilation unit for master.c")
+            sys.exit(1)
+        #
+
+        # Generate the INI file for Body messages 
+        self.generateIni(top)
+    #
+
+
+    ####################################################################
+    # Create the INI file from the node tree and attribute list
+    ####################################################################
+    def generateIni(self, top):
+
+        # Lets walk the tree looking for Bodyxxx_t structures
+        for node0 in top.children:
+            tag = node0.data
+            if (tag.id == Tag.DW_TAG_structure_type):
+                att = tag.attributes[Att.DW_AT_name]
+                m = re.search("Body.*_s", att.value)
+                if (m):
+                    self.expandStruct(node0)
                 #
             #
         #
-
-
-        # Look for a struct
-        foundNode = self.findInTree(root, 
-                            Tag.DW_TAG_structure_type, 
-                            Att.DW_AT_name, 
-                            "BodyFrame_s")
-
-        if (foundNode == None):
-            print("Not Found")
-        else:
-            tag = foundNode.data
-            print("Size: %s" % (tag.attributes[Att.DW_AT_byte_size].value))
-        #
-        
-        # For each item in the structure
-        for childNode in foundNode.children:
-            tag = childNode.data
-            print("  name: %s" % (tag.attributes[Att.DW_AT_name].value))
-            typeAdd = tag.attributes[Att.DW_AT_type].value
-            typeAdd = self.debracket(typeAdd)
-            typeTag = self.Tags[typeAdd]
-            typeValue = typeTag.attributes[Att.DW_AT_name].value
-            print("  type: %s" % typeValue)
-        #
-
     #
 
     ####################################################################
+    # Expand a structure tag
+    ####################################################################
+    def expandStruct(self, node):
+
+        tag = node.data
+        att = tag.attributes[Att.DW_AT_name]
+
+        print("*********** Structure: %s Size: %d" % 
+                (att.value, 
+                 int(tag.attributes[Att.DW_AT_byte_size].value,0)))
+        
+        # For each item in the structure
+        for childNode in node.children:
+
+            # Get the name of each member tag
+            tag = childNode.data
+
+
+            # If this is a TAG_member
+            if (tag.id == Tag.DW_TAG_member):
+
+                # Expand the member tag
+                self.expandMember(tag)
+                pass
+            # 
+            else:
+                print("Not a member")
+                sys.exit(1)
+            #
+        #
     #
+
+    ####################################################################
+    # Expand a member tag
+    ####################################################################
+    def expandMember(self, tag):
+
+        # Lets print the name
+        print("  name: %s" % (tag.attributes[Att.DW_AT_name].value))
+
+        # Lets get the type tag
+        typeTag = tag.attributes[Att.DW_AT_type]
+
+        # Get the raw value of the type
+        typeValue = typeTag.value
+
+        # And now the address of the type
+        typeAdd = self.debracket(typeValue)
+
+        # And now the tag itself
+        typeTag = self.Tags[typeAdd]
+
+        # If this is the base type
+        if (typeTag.id == Tag.DW_TAG_base_type):
+            pass
+
+        # If this a further typedef
+        elif (typeTag.id == Tag.DW_TAG_typedef):
+            pass
+
+        # If this a nested structure
+        elif (typeTag.id == Tag.DW_TAG_structure_type):
+            pass
+
+        # If this a nested union
+        elif (typeTag.id == Tag.DW_TAG_union_type):
+            pass
+        #
+
+        try:
+            typeValue = typeTag.attributes[Att.DW_AT_name].value
+            print("  type: %s" % typeValue)
+        except:
+            print("Failed on", typeTag)
+            sys.exit(1)
+        #
+    #
+
+
+
+    ####################################################################
+    # Find a given value for a set attribute in a given tag type
     ####################################################################
     def findInTree(self, node, tagId, attId, attValue):
 
@@ -243,7 +317,7 @@ class App:
     #
 
     ####################################################################
-    #
+    # Print out the node tree
     ####################################################################
     def printTree(self, node):
         print(node.name, str(node.data))
@@ -255,7 +329,7 @@ class App:
 
 
     ####################################################################
-    #
+    # Remove the <> from a value and convert to an integer
     ####################################################################
     def debracket(self, s):
         s = s[1:-1]
@@ -265,7 +339,7 @@ class App:
 # App class
 
 ########################################################################
-#
+# Definition of a Tag
 ########################################################################
 class Tag:
 
@@ -303,7 +377,7 @@ class Tag:
               "DW_TAG_variable":         DW_TAG_variable}
 
     ####################################################################
-    #
+    # Constructor
     ####################################################################
     def __init__(self, add, name):
         self.add          = add   # Address of tag
@@ -312,42 +386,35 @@ class Tag:
     #
 
     ####################################################################
-    #
-    ####################################################################
-    def setTagId(self, id):
-        self.id  = id # Tag ID from above list
-    #
-
-    ####################################################################
-    #
+    # Get the Tag id
     ####################################################################
     def getTagId(self):
         return self.id
     #
 
     ####################################################################
-    #
+    # Get the address of a tag
     ####################################################################
     def getTagAdd(self):
         return self.add
     #
 
     ####################################################################
-    #
+    # Add an attribute to a tag
     ####################################################################
     def addAtt(self, att):
         self.attributes[att.id] = att
     #
 
     ####################################################################
-    #
+    # Add a child Tag to the current tag
     ####################################################################
     def addChild(self, child):
         self.listChildren.append(child)
     #
 
     ####################################################################
-    #
+    # Convert to a string
     ####################################################################
     def __str__(self):
         s = "TAG Add:%x " % (self.add)
@@ -361,20 +428,20 @@ class Tag:
     #
 
     ####################################################################
-    #
+    # Convert a tag name to an enumeration
     ####################################################################
-    def nameToId(self, tag):
+    def nameToId(self, name):
 
-        retval = self.DW_TAG_null
-        if (tag in self.DW_TAG):
-            retval = self.DW_TAG[tag]
+        retval = self.DW_TAG_null # If bad name
+        if (name in self.DW_TAG):
+            retval = self.DW_TAG[name]
         #
 
         return retval
     #
 
     ####################################################################
-    #
+    # Convert Tag enumeration to text string
     ####################################################################
     def idToName(self, id):
 
@@ -390,7 +457,7 @@ class Tag:
 
 
 ########################################################################
-#
+# Attribute
 ########################################################################
 class Att:
 
@@ -449,7 +516,7 @@ class Att:
 
 
     ####################################################################
-    #
+    # Constructore
     ####################################################################
     def __init__(self, attName, value):
         self.id    = self.nameToId(attName)
@@ -457,7 +524,7 @@ class Att:
     #
 
     ####################################################################
-    #
+    # Convert to string
     ####################################################################
     def __str__(self):
         return "ATT %s(%d) Value=%s" % (self.idToName(self.id), 
@@ -466,20 +533,20 @@ class Att:
     #
 
     ####################################################################
-    #
+    # Convert text name to enumeration
     ####################################################################
-    def nameToId(self, tag):
+    def nameToId(self, name):
 
         retval = self.DW_AT_null
-        if (tag in self.DW_AT):
-            retval = self.DW_AT[tag]
+        if (name in self.DW_AT):
+            retval = self.DW_AT[name]
         #
 
         return retval
     #
 
     ####################################################################
-    #
+    # Convert enumeration to text string
     ####################################################################
     def idToName(self, id):
 
@@ -527,20 +594,6 @@ class Node:
     #
 
     ####################################################################
-    #
-    ####################################################################
-    def setName(self, name):
-        self.name = name
-    #
-
-    ####################################################################
-    #
-    ####################################################################
-    def setData(self, data):
-        self.data = data
-    #
-
-    ####################################################################
     # Convert to string
     ####################################################################
     def __str__(self):
@@ -550,8 +603,11 @@ class Node:
         return s
     #
 
-#
+# end Node
 
+########################################################################
+#
+########################################################################
 if __name__ == "__main__":
     obj = App(sys.argv[1])
     obj.main()
