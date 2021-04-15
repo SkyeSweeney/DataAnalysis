@@ -18,7 +18,10 @@ class App:
         self.fn = fn
         self.out = "qqq.ini"
 
-        self.Tags = {} # Dictionary of all tags
+        self.Nodes = {} # Dictionary of all nodes by address
+
+        # Create the root node of the tree
+        self.root = Node("Root", None, None)
     #
 
     ####################################################################
@@ -26,20 +29,29 @@ class App:
     ####################################################################
     def main(self):
 
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+
         fin = open(self.fn, "r")
         #fout = open(self.out, "w")
-
-        # This is the top of the tree
-        root = Node("Root", None, None)
-
-        # This the current working node
-        node = root
 
         lastLevel = -1
 
         lineno = 0
 
         tag = Tag(0, "DW_TAG_null")
+
+        node = self.root
 
         # For each line in the DWARF listing
         for line in fin:
@@ -70,15 +82,15 @@ class App:
                 # Save the accumulated tag and its attributes 
                 # to the dictionary of tags
                 try:
-                    self.Tags[tag.getTagAdd()] = tag
+                    self.Nodes[tag.getTagAdd()] = node
                 except:
                     pass
                 #
 
                 # Pull out level, add, and tag from line
-                level = int(line[1:3].strip(), 0)
-                add = int(line[5:15], 0)
-                i = line.find("DW")
+                level   = int(line[1:3].strip(), 0)
+                add     = int(line[5:15], 0)
+                i       = line.find("DW")
                 tagName = line[i:]
 
                 # Create the base tag for the next tag and attributes
@@ -115,7 +127,6 @@ class App:
                 # Add a child node to the parent node
                 node = node.addChild("Level%d"%level, tag)
                 parent = node.parent
-                #print(level, len(parent.children))
 
                 lastLevel = level
 
@@ -146,23 +157,14 @@ class App:
         # Save the accumulated tag and its attributes 
         # to the dictionary of tags
         try:
-            tag
-            self.Tags[tag.getId()] = tag
+            self.nodes[tag.getId()] = node
         except:
             pass
         #
 
-        # Go through tags and look for those with Bodyxxx
-        if (False):
-            for add, tag in self.Tags.items():
-                if (tag.getTagId() == Tag.DW_TAG_structure_type):
-                    att = tag.attributes[18]
-                    if (att.value[0:4] == "Body"):
-                        print(str(att))
-
 
         # Lets find the top node for the "master.c" compilation unit
-        top = self.findInTree(root, 
+        top = self.findInTree(self.root, 
                                Tag.DW_TAG_compile_unit, 
                                Att.DW_AT_name, 
                                "master.c")
@@ -180,100 +182,215 @@ class App:
     ####################################################################
     # Create the INI file from the node tree and attribute list
     ####################################################################
-    def generateIni(self, top):
+    def generateIni(self, topNode):
 
         # Lets walk the tree looking for Bodyxxx_t structures
-        for node0 in top.children:
-            tag = node0.data
+        for node in topNode.children:
+            tag = node.data
             if (tag.id == Tag.DW_TAG_structure_type):
                 att = tag.attributes[Att.DW_AT_name]
                 m = re.search("Body.*_s", att.value)
                 if (m):
-                    self.expandStruct(node0)
+                    self.expandStruct(node)
                 #
             #
         #
     #
 
     ####################################################################
-    # Expand a structure tag
+    # Expand a DW_TAG_structure_type
+    # Attributes include:
+    #   DW_AT_name
+    #   DW_AT_byte_size
+    #   DW_AT_sibling
+    # Children include:
+    #   DW_TAG_member
     ####################################################################
     def expandStruct(self, node):
 
         tag = node.data
-        att = tag.attributes[Att.DW_AT_name]
 
-        print("*********** Structure: %s Size: %d" % 
-                (att.value, 
-                 int(tag.attributes[Att.DW_AT_byte_size].value,0)))
+        name      = tag.attributes[Att.DW_AT_name].value
+        byte_size = self.getInt(tag, Att.DW_AT_byte_size, 0)
+
+        print("")
+        print("*********** Structure: %s Size: %d" % (name, byte_size))
         
-        # For each item in the structure
+        # For each child node
         for childNode in node.children:
 
-            # Get the name of each member tag
+            # Get the actual tag
             tag = childNode.data
-
 
             # If this is a TAG_member
             if (tag.id == Tag.DW_TAG_member):
 
                 # Expand the member tag
-                self.expandMember(tag)
-                pass
+                self.expandMember(childNode)
             # 
             else:
-                print("Not a member")
+                print("expandStructure: Unknown Tag")
                 sys.exit(1)
             #
         #
     #
 
     ####################################################################
-    # Expand a member tag
+    # Expand a DW_TAG_member
+    # Attributes include:
+    #   DW_AT_name
+    #   DW_AT_data_member_location
+    #   DW_AT_type
+    #   DW_AT_bit_size
+    #   DW_AT_bit_offset
+    # Children include:
+    #   None
     ####################################################################
-    def expandMember(self, tag):
+    def expandMember(self, node):
 
-        # Lets print the name
-        print("  name: %s" % (tag.attributes[Att.DW_AT_name].value))
+        tag = node.data
 
-        # Lets get the type tag
-        typeTag = tag.attributes[Att.DW_AT_type]
+        # Get tag attributes
+        name                 = tag.attributes[Att.DW_AT_name].value
+        data_member_location = self.getInt(tag, Att.DW_AT_data_member_location, 0)
+        typ                  = self.debracket(tag.attributes[Att.DW_AT_type].value)
+        bitSize              = self.getInt(tag, Att.DW_AT_bit_size, 0)
+        bitOffset            = self.getInt(tag, Att.DW_AT_bit_offset, 0)
 
-        # Get the raw value of the type
-        typeValue = typeTag.value
+        # Lets print the attributes
+        print("  member name: %s loc:%d type:%x" % (name, data_member_location, typ))
 
-        # And now the address of the type
-        typeAdd = self.debracket(typeValue)
-
-        # And now the tag itself
-        typeTag = self.Tags[typeAdd]
+        # Get the tag pointed to by the type attribute
+        typeNode = self.Nodes[typ]
+        typeTag = typeNode.data
 
         # If this is the base type
         if (typeTag.id == Tag.DW_TAG_base_type):
-            pass
+            print("expandMember: next tag is: %s" % typeTag.getTagName() )
 
         # If this a further typedef
         elif (typeTag.id == Tag.DW_TAG_typedef):
-            pass
+            self.expandTypedef(typeNode)
 
         # If this a nested structure
         elif (typeTag.id == Tag.DW_TAG_structure_type):
-            pass
+            print("expandMember: next tag is: %s" % typeTag.getTagName() )
 
         # If this a nested union
         elif (typeTag.id == Tag.DW_TAG_union_type):
-            pass
+            print("expandMember: next tag is: %s" % typeTag.getTagName() )
+        
+        # If an array
+        elif (typeTag.id == Tag.DW_TAG_array_type):
+            self.expandArray(typeNode)
+
+        else:
+            print("expandMember: next tag is: UNKNONW", typeTag)
+            sys.exit(1)
         #
 
-        try:
-            typeValue = typeTag.attributes[Att.DW_AT_name].value
-            print("  type: %s" % typeValue)
-        except:
-            print("Failed on", typeTag)
+    #
+
+    ####################################################################
+    # Expand a DW_TAG_typedef tag
+    # Attributes include:
+    #   DW_AT_name
+    #   DW_AT_type
+    # Children include:
+    #   None
+    ####################################################################
+    def expandTypedef(self, node):
+
+        tag = node.data
+
+        # Get tag attributes
+        name = tag.attributes[Att.DW_AT_name].value
+        typ  = self.debracket(tag.attributes[Att.DW_AT_type].value)
+
+        # Lets print the attributes
+        print("  typedef name: %s type:%x" % (name, typ))
+
+        # Get the tag pointed to by the type attribute
+        typeNode = self.Nodes[typ]
+        typeTag = typeNode.data
+
+        # If this is the base type
+        if (typeTag.id == Tag.DW_TAG_base_type):
+            self.expandBaseType(typeNode)
+
+        # If this a further typedef
+        elif (typeTag.id == Tag.DW_TAG_typedef):
+            self.expandTypedef(typeNode)
+
+        else:
+            print("expandTypedef: next tag is: UNKNONW", typeTag)
             sys.exit(1)
         #
     #
 
+    ####################################################################
+    # Expand a DW_TAG_base_type tag
+    # Attributes include:
+    #   DW_AT_byte_size
+    #   DW_AT_encoding
+    #   DW_AT_name
+    # Children include:
+    #   None
+    ####################################################################
+    def expandBaseType(self, node):
+
+        tag = node.data
+
+        # Get tag attributes
+        byte_size = int(tag.attributes[Att.DW_AT_byte_size].value, 0)
+        name      = tag.attributes[Att.DW_AT_name].value
+        
+        print("  base size:%d type:%s" %(byte_size, name))
+    #
+
+    ####################################################################
+    # Expand a DW_TAG_array_type tag
+    # Attributes include:
+    #   DW_AT_type
+    # Children include:
+    #   DW_TAG_subrange_type
+    ####################################################################
+    def expandArray(self, node):
+
+        tag = node.data
+
+        # Get tag attributes
+        typ = self.debracket(tag.attributes[Att.DW_AT_type].value)
+        print (" array of type 0x%x numIdx:%d" % (typ, len(node.children)))
+
+        #TODO get type and expand
+
+        # For each child node
+        for childNode in node.children:
+
+            # Get the actual tag
+            tag = childNode.data
+            dim = self.getInt(tag, Att.DW_AT_upper_bound, 0) + 1
+            print(dim)
+
+        #
+
+        sys.exit(1)
+
+    #
+
+
+    ####################################################################
+    # Get an attribute as an integer
+    ####################################################################
+    def getInt(self, tag, att, dflt):
+        try:
+            val = int(tag.attributes[att].value, 0)
+        except:
+            val = dflt
+        #
+        return val
+    #
 
 
     ####################################################################
@@ -309,6 +426,35 @@ class App:
             found = self.findInTree(child, tagId, attId, attValue)
             if (found):
                 return found
+            #
+        #
+
+        return None
+
+    #
+
+    ####################################################################
+    # Find an address in tree
+    ####################################################################
+    def findAddInTree(self, node, add):
+
+        # Get the data for this node
+        tag = node.data
+
+        # If has data
+        if (tag != None):
+
+            # If this is the right add
+            if (tag.add == add):
+                return node
+            #
+        #
+
+        # If we got here, this is not the right Tag, so try children
+        for child in node.children:
+            node = self.findAddInTree(child, add)
+            if (node):
+                return node
             #
         #
 
@@ -390,6 +536,13 @@ class Tag:
     ####################################################################
     def getTagId(self):
         return self.id
+    #
+
+    ####################################################################
+    # Get the Tag name
+    ####################################################################
+    def getTagName(self):
+        return self.idToName(self.id)
     #
 
     ####################################################################
