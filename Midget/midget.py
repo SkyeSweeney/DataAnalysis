@@ -22,6 +22,11 @@ class App:
 
         # Create the root node of the tree
         self.root = Node("Root", None, None)
+
+        self.csvEntry = CsvEntry()
+
+        self.debug = True
+        self.debug = False
     #
 
     ####################################################################
@@ -211,11 +216,43 @@ class App:
         tag = node.data
 
         name      = tag.attributes[Att.DW_AT_name].value
-        byte_size = self.getInt(tag, Att.DW_AT_byte_size, 0)
+        #byte_size = self.getInt(tag, Att.DW_AT_byte_size, 0)
 
-        print("")
-        print("*********** Structure: %s Size: %d" % (name, byte_size))
-        
+        # For each child node
+        for childNode in node.children:
+
+            # Get the actual tag
+            tag = childNode.data
+
+            # If this is a TAG_member
+            if (tag.id == Tag.DW_TAG_member):
+
+                # Expand the member tag
+                self.expandMember(childNode)
+            # 
+            else:
+                print("expandStructure: Unknown Tag")
+                sys.exit(1)
+            #
+        #
+    #
+
+    ####################################################################
+    # Expand a DW_TAG_union_type
+    # Attributes include:
+    #   DW_AT_name
+    #   DW_AT_byte_size
+    #   DW_AT_sibling
+    # Children include:
+    #   DW_TAG_member
+    ####################################################################
+    def expandUnion(self, node):
+
+        tag = node.data
+
+        name      = tag.attributes[Att.DW_AT_name].value
+        #byte_size = self.getInt(tag, Att.DW_AT_byte_size, 0)
+
         # For each child node
         for childNode in node.children:
 
@@ -257,8 +294,16 @@ class App:
         bitSize              = self.getInt(tag, Att.DW_AT_bit_size, 0)
         bitOffset            = self.getInt(tag, Att.DW_AT_bit_offset, 0)
 
+
+        # Add to CVS entry
+        self.csvEntry.appendPath(name)
+        self.csvEntry.setByteOffset(data_member_location)
+        self.csvEntry.setBitSize(bitSize)
+        self.csvEntry.setBitOffset(bitOffset)
+
         # Lets print the attributes
-        print("  member name: %s loc:%d type:%x" % (name, data_member_location, typ))
+        if (self.debug):
+            print("  member name: %s Offset:%d" % (name, data_member_location))
 
         # Get the tag pointed to by the type attribute
         typeNode = self.Nodes[typ]
@@ -266,7 +311,7 @@ class App:
 
         # If this is the base type
         if (typeTag.id == Tag.DW_TAG_base_type):
-            print("expandMember: next tag is: %s" % typeTag.getTagName() )
+            self.expandBaseType(typeNode)
 
         # If this a further typedef
         elif (typeTag.id == Tag.DW_TAG_typedef):
@@ -274,11 +319,11 @@ class App:
 
         # If this a nested structure
         elif (typeTag.id == Tag.DW_TAG_structure_type):
-            print("expandMember: next tag is: %s" % typeTag.getTagName() )
+            self.expandStruct(typeNode)
 
         # If this a nested union
         elif (typeTag.id == Tag.DW_TAG_union_type):
-            print("expandMember: next tag is: %s" % typeTag.getTagName() )
+            self.expandUnion(typeNode)
         
         # If an array
         elif (typeTag.id == Tag.DW_TAG_array_type):
@@ -288,6 +333,9 @@ class App:
             print("expandMember: next tag is: UNKNONW", typeTag)
             sys.exit(1)
         #
+
+        print(self.csvEntry)
+        self.csvEntry.clear()
 
     #
 
@@ -308,7 +356,8 @@ class App:
         typ  = self.debracket(tag.attributes[Att.DW_AT_type].value)
 
         # Lets print the attributes
-        print("  typedef name: %s type:%x" % (name, typ))
+        if (self.debug):
+            print("  typedef name: %s type:%x" % (name, typ))
 
         # Get the tag pointed to by the type attribute
         typeNode = self.Nodes[typ]
@@ -344,8 +393,11 @@ class App:
         # Get tag attributes
         byte_size = int(tag.attributes[Att.DW_AT_byte_size].value, 0)
         name      = tag.attributes[Att.DW_AT_name].value
+
+        self.csvEntry.setTyp(name)
         
-        print("  base size:%d type:%s" %(byte_size, name))
+        if (self.debug):
+            print("  base size:%d type:%s" %(byte_size, name))
     #
 
     ####################################################################
@@ -361,9 +413,22 @@ class App:
 
         # Get tag attributes
         typ = self.debracket(tag.attributes[Att.DW_AT_type].value)
-        print (" array of type 0x%x numIdx:%d" % (typ, len(node.children)))
+        if (self.debug):
+            print (" array of type 0x%x numIdx:%d" % (typ, len(node.children)))
 
-        #TODO get type and expand
+        newNode = self.Nodes[typ]
+        newTag = newNode.data
+
+        if (newTag.id == Tag.DW_TAG_base_type):
+            self.expandBaseType(newNode)
+
+        elif (newTag.id == Tag.DW_TAG_typedef):
+            self.expandTypedef(newNode)
+        else:
+            print("BAD")
+            print(newNode)
+            sys.exit(1)
+        #
 
         # For each child node
         for childNode in node.children:
@@ -371,11 +436,8 @@ class App:
             # Get the actual tag
             tag = childNode.data
             dim = self.getInt(tag, Att.DW_AT_upper_bound, 0) + 1
-            print(dim)
-
+            self.csvEntry.appendIndiceSize(dim)
         #
-
-        sys.exit(1)
 
     #
 
@@ -483,6 +545,76 @@ class App:
     #
 
 # App class
+
+########################################################################
+# Definition of a CsvEntry
+########################################################################
+class CsvEntry:
+
+    def __init__(self):
+        self.clear()
+    #
+
+    def clear(self):
+        self.fullName = ""
+        self.name = ""
+        self.typ = ""
+        self.byteOffset = 0
+        self.bitOffset = 0
+        self.bitWidth = 0
+        try:
+            del self.indiceSizes
+        except:
+            pass
+        #
+        self.indiceSizes = []
+    #
+
+    def appendPath(self, path):
+        if (len(self.fullName) == 0):
+            self.fullName = path
+        else:
+            self.fullName += "." + path
+        #
+    #
+
+    def setTyp(self, typ):
+        self.typ = typ
+    #
+
+    def setByteOffset(self, offset):
+        self.byteOffset = offset
+    #
+
+    def setBitOffset(self, offset):
+        self.bitOffset = offset
+    #
+
+    def setBitSize(self, size):
+        self.bitWidth = size
+    #
+
+    def appendIndiceSize(self, size):
+        self.indiceSizes.append(size)
+    #
+
+    def __str__(self):
+        s = "%s,%s,%s,%d,%d,%d,%d" %  \
+            ( self.fullName,
+              self.name,
+              self.typ,
+              self.byteOffset,
+              self.bitOffset,
+              self.bitWidth,
+              len(self.indiceSizes))
+        for size in self.indiceSizes:
+            s += ",%d" % size
+        #
+
+        return s
+    #
+
+#
 
 ########################################################################
 # Definition of a Tag

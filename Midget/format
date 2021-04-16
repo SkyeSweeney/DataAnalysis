@@ -1,0 +1,4 @@
+:%s/^< 1/< 1/g
+:g/decl_file/d
+:g/decl_line/d
+:g/decl_column/d
