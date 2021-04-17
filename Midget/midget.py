@@ -12,6 +12,7 @@ import traceback
 ########################################################################
 class App:
 
+
     ####################################################################
     # Constructor
     ####################################################################
@@ -37,21 +38,8 @@ class App:
     ####################################################################
     def main(self):
 
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-
         fin = open(self.fn, "r")
-        #fout = open(self.out, "w")
+        self.fout = open(self.out, "w")
 
         lastLevel = -1
 
@@ -340,9 +328,11 @@ class App:
             sys.exit(1)
         #
 
-        if (self.csvEntry.typ != ""):
+        if (self.csvEntry.typEnum != Types.TYPES_null):
             self.csvEntry.setName(".".join(self.names))
-            print(self.csvEntry)
+            s = str(self.csvEntry)
+            print(s)
+            self.fout.write(s+'\n')
         #
         self.csvEntry.clear()
         self.names.pop()
@@ -402,12 +392,17 @@ class App:
 
         # Get tag attributes
         byte_size = int(tag.attributes[Att.DW_AT_byte_size].value, 0)
-        name      = tag.attributes[Att.DW_AT_name].value
+        typeName  = tag.attributes[Att.DW_AT_name].value
 
-        self.csvEntry.setTyp(name)
+
+        q = Types(0)
+        typeEnum = q.nameToEnum(typeName)
+
+        self.csvEntry.setTypEnum(typeEnum)
         
         if (self.debug):
             print("  base size:%d type:%s" %(byte_size, name))
+        #
     #
 
     ####################################################################
@@ -557,6 +552,67 @@ class App:
 # App class
 
 ########################################################################
+# Types
+########################################################################
+class Types:
+
+    TYPES_char             = 1
+    TYPES_unsigned_char    = 2
+    TYPES_short            = 3
+    TYPES_unsigned_short   = 4
+    TYPES_int              = 5
+    TYPES_unsigned_int     = 6
+    TYPES_long             = 7
+    TYPES_unsigned_long    = 8
+    TYPES_float            = 9
+    TYPES_double           = 10
+    TYPES_null             = 11
+
+    TYPES = {"char":             TYPES_char,
+             "unsigned char":    TYPES_unsigned_char,
+             "short":            TYPES_short,
+             "unsigned short":   TYPES_unsigned_short,
+             "int":              TYPES_int,
+             "unsigned int":     TYPES_unsigned_int,
+             "long":             TYPES_long,
+             "unsigned long":    TYPES_unsigned_long,
+             "float":            TYPES_float,
+             "double":           TYPES_double,
+             "null":             TYPES_null}
+
+    def __init__(self, enum):
+        self.enum = enum
+    #
+
+    ####################################################################
+    # Convert a type name to an enumeration
+    ####################################################################
+    def nameToEnum(self, name):
+
+        retval = self.TYPES_null # If bad name
+        if (name in self.TYPES):
+            retval = self.TYPES[name]
+        #
+
+        return retval
+    #
+
+    ####################################################################
+    # Convert Tag enumeration to text string
+    ####################################################################
+    def enumToName(self, enum):
+
+        for key,value in self.TYPES.items():
+            if (value == enum):
+                return key
+            #
+        #
+
+        return "TYPES_null"
+    #
+#    
+
+########################################################################
 # Definition of a CsvEntry
 ########################################################################
 class CsvEntry:
@@ -567,7 +623,7 @@ class CsvEntry:
 
     def clear(self):
         self.name = ""
-        self.typ = ""
+        self.typEnum = Types.TYPES_null
         self.byteOffset = 0
         self.bitOffset = 0
         self.bitWidth = 0
@@ -583,8 +639,8 @@ class CsvEntry:
         self.name = name
     #
 
-    def setTyp(self, typ):
-        self.typ = typ
+    def setTypEnum(self, typEnum):
+        self.typEnum = typEnum
     #
 
     def setByteOffset(self, offset):
@@ -604,9 +660,11 @@ class CsvEntry:
     #
 
     def __str__(self):
-        s = "%s,%s,%d,%d,%d,%d" %  \
+        q = Types(0)
+        s = "%s,%s(%d),%d,%d,%d,%d" %  \
             ( self.name,
-              self.typ,
+              q.enumToName(self.typEnum),
+              self.typEnum,
               self.byteOffset,
               self.bitOffset,
               self.bitWidth,
