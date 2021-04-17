@@ -2,6 +2,7 @@
 
 import sys
 import re
+import traceback
 
 
 
@@ -27,6 +28,8 @@ class App:
 
         self.debug = True
         self.debug = False
+
+        self.names = []
     #
 
     ####################################################################
@@ -196,7 +199,9 @@ class App:
                 att = tag.attributes[Att.DW_AT_name]
                 m = re.search("Body.*_s", att.value)
                 if (m):
+                    self.names.append(att.value)
                     self.expandStruct(node)
+                    self.names.pop()
                 #
             #
         #
@@ -294,9 +299,10 @@ class App:
         bitSize              = self.getInt(tag, Att.DW_AT_bit_size, 0)
         bitOffset            = self.getInt(tag, Att.DW_AT_bit_offset, 0)
 
+        self.names.append(name)
+
 
         # Add to CVS entry
-        self.csvEntry.appendPath(name)
         self.csvEntry.setByteOffset(data_member_location)
         self.csvEntry.setBitSize(bitSize)
         self.csvEntry.setBitOffset(bitOffset)
@@ -334,8 +340,12 @@ class App:
             sys.exit(1)
         #
 
-        print(self.csvEntry)
+        if (self.csvEntry.typ != ""):
+            self.csvEntry.setName(".".join(self.names))
+            print(self.csvEntry)
+        #
         self.csvEntry.clear()
+        self.names.pop()
 
     #
 
@@ -556,7 +566,6 @@ class CsvEntry:
     #
 
     def clear(self):
-        self.fullName = ""
         self.name = ""
         self.typ = ""
         self.byteOffset = 0
@@ -570,12 +579,8 @@ class CsvEntry:
         self.indiceSizes = []
     #
 
-    def appendPath(self, path):
-        if (len(self.fullName) == 0):
-            self.fullName = path
-        else:
-            self.fullName += "." + path
-        #
+    def setName(self, name):
+        self.name = name
     #
 
     def setTyp(self, typ):
@@ -599,9 +604,8 @@ class CsvEntry:
     #
 
     def __str__(self):
-        s = "%s,%s,%s,%d,%d,%d,%d" %  \
-            ( self.fullName,
-              self.name,
+        s = "%s,%s,%d,%d,%d,%d" %  \
+            ( self.name,
               self.typ,
               self.byteOffset,
               self.bitOffset,
