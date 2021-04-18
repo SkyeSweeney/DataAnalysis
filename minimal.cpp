@@ -34,7 +34,9 @@ DECLARE_APP(MyApp)
 // Give wxWidgets the means to create a MyApp object
 IMPLEMENT_APP(MyApp)
 
+//**********************************************************************
 // Initialize the application
+//**********************************************************************
 bool MyApp::OnInit()
 {
     // Create the main application window
@@ -53,6 +55,9 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_EXIT,  MyFrame::OnQuit)
 END_EVENT_TABLE()
 
+//**********************************************************************
+//
+//**********************************************************************
 void MyFrame::OnAbout(wxCommandEvent& event)
 {
     wxString msg;
@@ -63,14 +68,20 @@ void MyFrame::OnAbout(wxCommandEvent& event)
                  wxOK | wxICON_INFORMATION, this);
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 void MyFrame::OnQuit(wxCommandEvent& event)
 {
     // Destroy the frame
     Close();
 }
 
-#include "mondrian.xpm"
+//#include "mondrian.xpm"
 
+//**********************************************************************
+//
+//**********************************************************************
 MyFrame::MyFrame(const wxString& title)
        : wxFrame(NULL, wxID_ANY, title)
 {
