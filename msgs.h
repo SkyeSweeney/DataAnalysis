@@ -93,26 +93,6 @@ typedef struct BodyTime_s
     uint32_t  nsec;   // Basic simulation time (nonos into above)
 } BodyTime_t;
 
-typedef struct BodyTest_s
-{
-    union f_u
-    {
-        uint32_t val;
-        struct u_s
-        {
-            uint32_t a:10;
-            uint32_t b:10;
-            uint32_t c:10;
-            uint32_t d:2;
-        } u_t;
-        struct s_s
-        {
-            uint32_t q;
-            uint16_t r;
-        } s_t;
-    } f_t;
-
-} BodyTest_t;
 
 typedef struct BodyGeneric_s
 {
@@ -131,7 +111,6 @@ typedef union Body_s
     BodyConfig_t   config;
     BodyLocation_t location;
     BodyTime_t     time;
-    BodyTest_t     test;
     BodyGeneric_t  generic;
 } Body_t;
 

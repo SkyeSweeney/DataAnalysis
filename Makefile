@@ -1,7 +1,5 @@
 
-
-
-all: hub video cmd
+all: hub video cmd minimal img
 
 hub: hub.o nodes.o
 	g++ -Wall -g -o hub -pthread -lreadline hub.o nodes.o -lreadline
@@ -33,3 +31,19 @@ clean:
 	rm -f hub
 	rm -f video
 	rm -f cmd
+
+
+minimal: minimal.o
+	g++ -o minimal minimal.o `wx-config --libs`
+
+
+minimal.o: minimal.cpp
+	g++ -c -Wall `wx-config --cxxflags` minimal.cpp
+
+
+img: img.o
+	g++ -o img img.o `wx-config --libs`
+
+
+img.o: img.cpp
+	g++ -c -Wall `wx-config --cxxflags` img.cpp

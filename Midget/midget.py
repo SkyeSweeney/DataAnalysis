@@ -18,7 +18,7 @@ class App:
     ####################################################################
     def __init__(self, fn):
         self.fn = fn
-        self.out = "qqq.ini"
+        self.out = "vars.csv"
 
         self.Nodes = {} # Dictionary of all nodes by address
 
@@ -171,14 +171,14 @@ class App:
         #
 
         # Generate the INI file for Body messages 
-        self.generateIni(top)
+        self.generateCsv(top)
     #
 
 
     ####################################################################
-    # Create the INI file from the node tree and attribute list
+    # Create the Csv file from the node tree and attribute list
     ####################################################################
-    def generateIni(self, topNode):
+    def generateCsv(self, topNode):
 
         # Lets walk the tree looking for Bodyxxx_t structures
         for node in topNode.children:

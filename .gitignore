@@ -1,7 +1,11 @@
 hub
 cmd
 video
+img
+minimal
+vars.csv
 *.o
 *.swp
 Midget/master
 Midget/master.dwarf
+Midget/vars.csv
