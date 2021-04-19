@@ -1,58 +1,13 @@
 #include <wx/wx.h>
 #include <wx/sizer.h>
+#include <wx/timer.h>
+
+#include "img.h"
 
 
 
-//**********************************************************************
-//
-//**********************************************************************
-class wxImagePanel : public wxPanel
-{
-    wxBitmap image;
-    
-public:
-
-    // Constructor
-    wxImagePanel(wxFrame* parent, wxString file, wxBitmapType format);
-    
-    void paintEvent(wxPaintEvent & evt);
-    void paintNow();
-    void render(wxDC& dc);
-    
-    // some useful events
-    /*
-     void mouseMoved(wxMouseEvent& event);
-     void mouseDown(wxMouseEvent& event);
-     void mouseWheelMoved(wxMouseEvent& event);
-     void mouseReleased(wxMouseEvent& event);
-     void rightClick(wxMouseEvent& event);
-     void mouseLeftWindow(wxMouseEvent& event);
-     void keyPressed(wxKeyEvent& event);
-     void keyReleased(wxKeyEvent& event);
-     */
-    
-    DECLARE_EVENT_TABLE()
-};
 
 
-// Event table for wxImagePanel
-BEGIN_EVENT_TABLE(wxImagePanel, wxPanel)
-    // some useful events
-    /*
-     EVT_MOTION(wxImagePanel::mouseMoved)
-     EVT_LEFT_DOWN(wxImagePanel::mouseDown)
-     EVT_LEFT_UP(wxImagePanel::mouseReleased)
-     EVT_RIGHT_DOWN(wxImagePanel::rightClick)
-     EVT_LEAVE_WINDOW(wxImagePanel::mouseLeftWindow)
-     EVT_KEY_DOWN(wxImagePanel::keyPressed)
-     EVT_KEY_UP(wxImagePanel::keyReleased)
-     EVT_MOUSEWHEEL(wxImagePanel::mouseWheelMoved)
-     */
-    
-    // catch paint events
-    EVT_PAINT(wxImagePanel::paintEvent)
-
-END_EVENT_TABLE()
 
 
 // some useful events
@@ -67,22 +22,6 @@ END_EVENT_TABLE()
  void wxImagePanel::keyReleased(wxKeyEvent& event) {}
  */
 
-// Declare our main frame class
-class MyFrame : public wxFrame
-{
-public:
-    // Constructor
-    MyFrame(const wxString& title);
-
-    // Event handlers
-    void OnQuit(wxCommandEvent& event);
-    void OnAbout(wxCommandEvent& event);
-
-private:
-    wxImagePanel *drawPane;
-    // This class handles events
-    DECLARE_EVENT_TABLE()
-};
 
 // Event table for MyFrame
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
@@ -121,29 +60,15 @@ MyFrame::MyFrame(const wxString& title)
     CreateStatusBar(2);
     SetStatusText(wxT("Welcome to wxWidgets!"));
 
-    // then simply create like this
+    // Create an image panel
     drawPane = new wxImagePanel(this,
                                 wxT("output_012021.png"),
-                                wxBITMAP_TYPE_JPEG);
+                                wxBITMAP_TYPE_PNG);
 
-#if 0
-        wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-        frame = new wxFrame(NULL,
-                            wxID_ANY,
-                            wxT("Hello wxDC"),
-                            wxPoint(50,50),
-                            wxSize(320,180));
+    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+    sizer->Add(drawPane, 1, wxEXPAND);
+    SetSizer(sizer);
 
-        // then simply create like this
-        drawPane = new wxImagePanel(frame,
-                                    wxT("output_012021.png"),
-                                    wxBITMAP_TYPE_JPEG);
-        sizer->Add(drawPane, 1, wxEXPAND);
-
-        frame->SetSizer(sizer);
-
-        frame->Show();
-#endif
 
 }
 
@@ -169,16 +94,61 @@ void MyFrame::OnQuit(wxCommandEvent& event)
     Close();
 }
 
+
+
+
+
+// Event table for wxImagePanel
+BEGIN_EVENT_TABLE(wxImagePanel, wxPanel)
+    // some useful events
+    /*
+     EVT_MOTION(wxImagePanel::mouseMoved)
+     EVT_LEFT_DOWN(wxImagePanel::mouseDown)
+     EVT_LEFT_UP(wxImagePanel::mouseReleased)
+     EVT_RIGHT_DOWN(wxImagePanel::rightClick)
+     EVT_LEAVE_WINDOW(wxImagePanel::mouseLeftWindow)
+     EVT_KEY_DOWN(wxImagePanel::keyPressed)
+     EVT_KEY_UP(wxImagePanel::keyReleased)
+     EVT_MOUSEWHEEL(wxImagePanel::mouseWheelMoved)
+     */
+    
+    // catch paint events
+    EVT_PAINT(wxImagePanel::paintEvent)
+    EVT_TIMER(wxID_ANY, wxImagePanel::OnTimer)
+
+END_EVENT_TABLE()
+
 //**********************************************************************
 // Constructor
 //**********************************************************************
 wxImagePanel::wxImagePanel(wxFrame     *parent, 
                            wxString     file, 
                            wxBitmapType format) :
-wxPanel(parent)
+    wxPanel(parent),
+    m_timer(this),
+    m_sn(0)
 {
     // load the file... ideally add a check to see if loading was successful
     image.LoadFile(file, format);
+
+    m_timer.Start(30);
+
+}
+
+//**********************************************************************
+//**********************************************************************
+void wxImagePanel::OnTimer(wxTimerEvent & evt)
+{
+    char buf[128];
+
+    m_sn ++;
+
+    sprintf(buf, "/home/skye/Projects/DataAnalysis/thumbs/output_%06d.png", m_sn);
+
+    image.LoadFile(buf, wxBITMAP_TYPE_PNG);
+    this->paintNow();
+
+    printf("LLL\n");
 }
 
 //**********************************************************************

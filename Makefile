@@ -41,7 +41,7 @@ minimal.o: minimal.cpp
 	g++ -c -Wall `wx-config --cxxflags` minimal.cpp
 
 
-img: img.o
+img: img.o img.h
 	g++ -o img img.o `wx-config --libs`
 
 
