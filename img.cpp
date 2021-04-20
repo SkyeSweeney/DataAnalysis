@@ -60,13 +60,23 @@ MyFrame::MyFrame(const wxString& title)
     CreateStatusBar(2);
     SetStatusText(wxT("Welcome to wxWidgets!"));
 
+    wxTextCtrl *m_timeTxt;
+    m_timeTxt = new wxTextCtrl(this, 
+                               wxID_ANY, 
+                               "Single line.",
+                               wxDefaultPosition, 
+                               wxDefaultSize,
+                               wxTE_PROCESS_ENTER);
+
+
     // Create an image panel
     drawPane = new wxImagePanel(this,
                                 wxT("output_012021.png"),
                                 wxBITMAP_TYPE_PNG);
 
-    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(drawPane, 1, wxEXPAND);
+    sizer->Add(m_timeTxt, 1, wxEXPAND);
     SetSizer(sizer);
 
 

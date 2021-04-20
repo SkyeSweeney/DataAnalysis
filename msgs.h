@@ -19,6 +19,7 @@ typedef enum
     MSGID_CONFIG   = 7,
     MSGID_LOCATION = 8,
     MSGID_TIME     = 9,
+    MSGID_PLAYBACK = 10,
     MSGID_MAX
 } MsgId_e;
 
@@ -31,10 +32,12 @@ typedef uint16_t NodeType_t;
 #pragma pack(1)
 typedef struct MsgHeader_s
 {
-    uint16_t    SOM;    // 0x534b
-    MsgId_t     msgId;
+    uint16_t    SOM;      // 0x534b
+    MsgId_t     msgId;    
     NodeType_t  source;
-    uint16_t    length;
+    uint16_t    length;   // Length of body
+    uint32_t    seconds;  // Unix seconds
+    uint32_t    nseconds; // Nano seconds into second
 } MsgHeader_t;
 #pragma pack(0)
 
@@ -93,10 +96,27 @@ typedef struct BodyTime_s
     uint32_t  nsec;   // Basic simulation time (nonos into above)
 } BodyTime_t;
 
+typedef enum {
+    PLAYBACK_STOP   = 0,
+    PLAYBACK_PLAY   = 1,
+    PLAYBACK_REWIND = 2,
+    PLAYBACK_SINGLE = 3,
+    PLAYBACK_SPEED  = 4,
+    PLAYBACK_LOAD   = 5,
+} PlaybackCmd_e;
+
+
+typedef struct BodyPlayback_s
+{
+    PlaybackCmd_e  cmd;      // Playback command (Enumeration)
+    double         ratio;    // Ration to realtime
+    char           fn[256];  // filename of file to playback
+} BodyPlayback_t;
+
 
 typedef struct BodyGeneric_s
 {
-    uint8_t donotuse[1024];  // Generic max size message
+    uint8_t donotuse[1024];  // Max size of a body
 } BodyGeneric_t;
 
 
@@ -111,6 +131,7 @@ typedef union Body_s
     BodyConfig_t   config;
     BodyLocation_t location;
     BodyTime_t     time;
+    BodyPlayback_t playback;
     BodyGeneric_t  generic;
 } Body_t;
 

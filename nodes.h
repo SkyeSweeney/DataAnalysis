@@ -9,11 +9,12 @@
 
 typedef enum __attribute__((aligned (2)))
 {
-   NODE_NONE   = 0,
-   NODE_CMD    = 1,
-   NODE_VIDEO  = 2,
-   NODE_MAP    = 3,
-   NODE_TIME   = 4,
+   NODE_NONE      = 0,
+   NODE_CMD       = 1,
+   NODE_VIDEO     = 2,
+   NODE_MAP       = 3,
+   NODE_TIME      = 4,
+   NODE_PLAYBACK  = 5,
    NODE_MAX
 } NodeType_e;
 

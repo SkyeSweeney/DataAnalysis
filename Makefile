@@ -1,5 +1,5 @@
 
-all: hub video cmd minimal img
+all: hub video cmd minimal img playback
 
 hub: hub.o nodes.o
 	g++ -Wall -g -o hub -pthread -lreadline hub.o nodes.o -lreadline
@@ -10,6 +10,9 @@ video: video.o nodes.o hub_if.o
 cmd: cmd.o nodes.o hub_if.o
 	g++ -Wall -o cmd -g  cmd.c nodes.o hub_if.o -lreadline -pthread
 
+playback: playback.o nodes.o hub_if.o
+	g++ -Wall -o playback -g -pthread playback.o nodes.o hub_if.o
+
 
 hub.o: hub.c msgs.h nodes.h
 	g++ -Wall -pthread -c -g hub.c
@@ -19,6 +22,9 @@ video.o: video.c msgs.h nodes.h
 
 cmd.o: cmd.c msgs.h nodes.h
 	g++ -Wall -pthread -c -g cmd.c
+
+playback.o: playback.c msgs.h nodes.h
+	g++ -Wall -pthread -c -g playback.c
 
 nodes.o: nodes.c nodes.h
 	g++ -Wall -c -g nodes.c

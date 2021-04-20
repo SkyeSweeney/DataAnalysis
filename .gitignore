@@ -3,6 +3,7 @@ cmd
 video
 img
 minimal
+playback
 vars.csv
 *.o
 *.swp
