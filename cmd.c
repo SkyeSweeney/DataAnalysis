@@ -95,15 +95,46 @@ static void processUserCmd(char *pCmdBuf)
     // switch on first token
     if (strcmp(pCmd,"frame") == 0)
     {
-        printf("Frame command\n");
-        msg.hdr.SOM = 0x534B;
-        msg.hdr.msgId = MSGID_FRAME;
-        msg.hdr.source = NODE_CMD;
-        msg.hdr.length = sizeof(BodyFrame_t);
-        msg.body.frame.frame = atoi(tokens[1]);
-        msg.body.frame.sec   = atoi(tokens[2]);
-        msg.body.frame.nsec  = atoi(tokens[3]);
-        hubif_send(&msg);
+        if (nToks == 4)
+        {
+            printf("Frame command\n");
+            msg.hdr.SOM    = 0x534B;
+            msg.hdr.msgId  = MSGID_FRAME;
+            msg.hdr.source = NODE_CMD;
+            msg.hdr.length = sizeof(BodyFrame_t);
+            msg.hdr.sec    = 0;
+            msg.hdr.nsec   = 0;
+            msg.body.frame.frame = atoi(tokens[1]);
+            msg.body.frame.sec   = atoi(tokens[2]);
+            msg.body.frame.nsec  = atoi(tokens[3]);
+            hubif_send(&msg);
+        }
+        else
+        {
+            printf("Wrong number of tokens\n");
+        }
+    }
+
+    else if (strcmp(pCmd,"playback") == 0)
+    {
+        if (nToks > 0)
+        {
+            printf("Playback command\n");
+            msg.hdr.SOM    = 0x534B;
+            msg.hdr.msgId  = MSGID_PLAYBACK;
+            msg.hdr.source = NODE_CMD;
+            msg.hdr.length = sizeof(BodyFrame_t);
+            msg.hdr.sec    = 0;
+            msg.hdr.nsec   = 0;
+            msg.body.playback.cmd     = PLAYBACK_STOP;
+            msg.body.playback.fn[0]   = 0;
+            msg.body.playback.ratio   = 1.0;
+            hubif_send(&msg);
+        }
+        else
+        {
+            printf("Wrong number of tokens\n");
+        }
     }
     else if (strcmp(pCmd,"exit") == 0)
     {

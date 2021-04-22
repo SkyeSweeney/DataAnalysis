@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
     // Initialize the Node structure
     nodesInit();
 
+    // Start the user interface thread
     pthread_t userThreadId;
     pthread_create(&userThreadId, NULL, userThread, NULL);
 
@@ -119,12 +120,12 @@ static void *userThread(void *parg)
         {
             case 1:
 
-                printf("| id | sd  | NodeType |\n");
+                printf("| id | sd  | NodeType             |\n");
                 for (i=0; i<NODE_MAX; i++)
                 {
                     // Get the socket we are to use
                     pNode = nodeGet(i);
-                    printf("| %02d | %03d | %s |\n", 
+                    printf("| %02d | %03d | %-20s |\n", 
                            i, 
                            pNode->sd, 
                            nodeIdToName(pNode->nodeType));
@@ -171,7 +172,11 @@ static void *nodeThread(void *parg)
         
         if (n == 0)
         {
-            printf("Node closed\n");
+            printf("Node closed. Logging out.\n");
+            close(sd);
+            pNode->sd = -1;
+            pNode->nodeType = NODE_NONE;
+            nodeRelease(nodeId);
             break;
         }
 

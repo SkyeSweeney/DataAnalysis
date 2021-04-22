@@ -58,7 +58,10 @@ int hubif_client_init(void)
     servaddr.sin_port = htons(HUB_PORT);
 
     int flag = 1;  
-    if (-1 == setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag))) {  
+    int err;
+    err = setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    if (err == -1)
+    {
         printf("setsockopt fail");  
     }  
 
@@ -142,7 +145,7 @@ int hubif_send(Msg_t *msg)
            msg->hdr.source,
            msg->hdr.length);
     err = send(m_sockfd, (void*)msg, sizeof(MsgHeader_t) + msg->hdr.length, 0);
-    printf("Send %d\n", err);
+    printf("Send %ld %d %d\n", sizeof(MsgHeader_t), msg->hdr.length, err);
     return err;
 }
 
@@ -152,6 +155,7 @@ static void * hubif_receiveThread(void *arg)
 
     Msg_t msg;
     int   err;
+    ssize_t got;
     uint16_t n;
     MsgId_t msgId;
 
@@ -159,9 +163,12 @@ static void * hubif_receiveThread(void *arg)
     for (;;)
     {
 
+        // Clear the message
+        memset(&msg, 0xff, sizeof(msg));
+
         // Read header
-        err = read(m_sockfd, (void*)&msg.hdr, sizeof(MsgHeader_t));
-        (void)err;
+        got = read(m_sockfd, (void*)&msg.hdr, sizeof(MsgHeader_t));
+        printf("Got header %ld\n", got);
 
         // Check header
         if (msg.hdr.SOM != 0x534B)
@@ -174,11 +181,16 @@ static void * hubif_receiveThread(void *arg)
         // Get the message ID and size
         msgId = msg.hdr.msgId;
         n = msg.hdr.length;
-        printf("Body size if %d\n", n);
+        printf("Body size is %d\n", n);
+
+        usleep(10000);
 
         // Read body
-        err = read(m_sockfd, (void*)&msg.body, n);
-        (void)err;
+        got = read(m_sockfd, (void*)&msg.body, n);
+        if (got != n)
+        {
+            printf("Got %ld and not %d bytes\n", got, (size_t)n);
+        }
 
         // If a valid message id
         if (msgId < MSGID_MAX)

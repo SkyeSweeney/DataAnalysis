@@ -1,6 +1,7 @@
 
 
 
+#define USE_NODE_STRING
 #include "nodes.h"
 
 
@@ -59,30 +60,11 @@ void nodeRelease(NodeId_t nodeId)
 
 const char *nodeIdToName(NodeId_t nodeId)
 {
-    const char * retval = "Unknown";
 
-    switch (nodeId)
+    if (nodeId >= NODE_MAX)
     {
- 
-        case NODE_NONE:
-            retval = "None";
-            break;
-        case NODE_CMD:
-            retval = "Command";
-            break;
-        case NODE_VIDEO:
-            retval = "Video";
-            break;
-        case NODE_MAP:
-            retval = "Map";
-            break;
-        case NODE_TIME:
-            retval = "Time";
-            break;
-        default:
-            retval = "Unknown";
-            break;
+        nodeId = NODE_MAX;
     }
-    return retval;
+    return NODE_STRING[nodeId];
 }
 

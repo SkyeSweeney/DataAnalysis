@@ -7,16 +7,29 @@
 
 #include "msgs.h"
 
-typedef enum __attribute__((aligned (2)))
-{
-   NODE_NONE      = 0,
-   NODE_CMD       = 1,
-   NODE_VIDEO     = 2,
-   NODE_MAP       = 3,
-   NODE_TIME      = 4,
-   NODE_PLAYBACK  = 5,
-   NODE_MAX
+
+#define FOREACH_NODE(OP) \
+        OP(NODE_NONE)   \
+        OP(NODE_CMD)  \
+        OP(NODE_VIDEO)   \
+        OP(NODE_MAP)   \
+        OP(NODE_TIME)   \
+        OP(NODE_PLAYBACK)   \
+        OP(NODE_MAX)
+
+#define GENERATE_ENUM(ENUM) ENUM,
+#define GENERATE_STRING(STRING) #STRING,
+
+typedef enum NODE_ENUM {
+    FOREACH_NODE(GENERATE_ENUM)
 } NodeType_e;
+
+#ifdef USE_NODE_STRING
+static const char *NODE_STRING[] = {
+    FOREACH_NODE(GENERATE_STRING)
+};
+#endif
+
 
 typedef uint16_t NodeId_t;
 

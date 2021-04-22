@@ -7,21 +7,33 @@
 
 
 
-typedef enum
-{
-    MSGID_UNK      = 0,
-    MSGID_LOGIN    = 1,
-    MSGID_LOGOUT   = 2,
-    MSGID_EXIT     = 3,
-    MSGID_REGISTER = 4,
-    MSGID_FRAME    = 5,
-    MSGID_LOG      = 6,
-    MSGID_CONFIG   = 7,
-    MSGID_LOCATION = 8,
-    MSGID_TIME     = 9,
-    MSGID_PLAYBACK = 10,
-    MSGID_MAX
+#define FOREACH_MSG(OP) \
+    OP(MSGID_UNK) \
+    OP(MSGID_LOGIN) \
+    OP(MSGID_LOGOUT) \
+    OP(MSGID_EXIT) \
+    OP(MSGID_REGISTER) \
+    OP(MSGID_FRAME) \
+    OP(MSGID_LOG) \
+    OP(MSGID_CONFIG) \
+    OP(MSGID_LOCATION) \
+    OP(MSGID_TIME) \
+    OP(MSGID_PLAYBACK) \
+    OP(MSGID_MAX)
+
+#define GENERATE_ENUM(ENUM) ENUM,
+#define GENERATE_STRING(STRING) #STRING,
+
+typedef enum MSG_ENUM {
+    FOREACH_MSG(GENERATE_ENUM)
 } MsgId_e;
+
+#ifdef USE_MSG_STRING
+static const char *MSG_STRING[] = {
+    FOREACH_MSG(GENERATE_STRING)
+};
+#endif
+
 
 
 #include "nodes.h"
@@ -33,11 +45,11 @@ typedef uint16_t NodeType_t;
 typedef struct MsgHeader_s
 {
     uint16_t    SOM;      // 0x534b
-    MsgId_t     msgId;    
-    NodeType_t  source;
-    uint16_t    length;   // Length of body
-    uint32_t    seconds;  // Unix seconds
-    uint32_t    nseconds; // Nano seconds into second
+    MsgId_t     msgId;    // Message identifier (uin16_t)
+    NodeType_t  source;   // Source of the message (uin16_t)
+    uint16_t    length;   // Length of body (not header)
+    uint32_t    sec;      // Unix seconds
+    uint32_t    nsec;     // Nano seconds into second
 } MsgHeader_t;
 #pragma pack(0)
 
@@ -121,6 +133,7 @@ typedef struct BodyGeneric_s
 
 
 // Union of all the message bodies
+#pragma pack(1)
 typedef union Body_s
 {
     BodyLogin_t    login;
@@ -134,13 +147,16 @@ typedef union Body_s
     BodyPlayback_t playback;
     BodyGeneric_t  generic;
 } Body_t;
+#pragma pack(0)
 
 // A generic message is a header and a body
+#pragma pack(1)
 typedef struct Msg_s
 {
     MsgHeader_t hdr;
     Body_t      body;
 } Msg_t;
+#pragma pack(0)
 
 
 #endif

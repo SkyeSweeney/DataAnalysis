@@ -5,32 +5,32 @@ hub: hub.o nodes.o
 	g++ -Wall -g -o hub -pthread -lreadline hub.o nodes.o -lreadline
 
 video: video.o nodes.o hub_if.o
-	g++ -Wall -o video -g -pthread video.o nodes.o hub_if.o
+	g++ -Wall -g -o video -pthread video.o nodes.o hub_if.o
 
 cmd: cmd.o nodes.o hub_if.o
-	g++ -Wall -o cmd -g  cmd.c nodes.o hub_if.o -lreadline -pthread
+	g++ -Wall -g -o cmd cmd.c nodes.o hub_if.o -lreadline -pthread
 
 playback: playback.o nodes.o hub_if.o
-	g++ -Wall -o playback -g -pthread playback.o nodes.o hub_if.o
+	g++ -Wall -g -o playback -pthread playback.o nodes.o hub_if.o
 
 
 hub.o: hub.c msgs.h nodes.h
-	g++ -Wall -pthread -c -g hub.c
+	g++ -Wall -g -pthread -c hub.c
 
 video.o: video.c msgs.h nodes.h
-	g++ -Wall -pthread -c -g video.c
+	g++ -Wall -g -pthread -c video.c
 
 cmd.o: cmd.c msgs.h nodes.h
-	g++ -Wall -pthread -c -g cmd.c
+	g++ -Wall -g -pthread -c cmd.c
 
 playback.o: playback.c msgs.h nodes.h
-	g++ -Wall -pthread -c -g playback.c
+	g++ -Wall -g -pthread -c playback.c
 
 nodes.o: nodes.c nodes.h
-	g++ -Wall -c -g nodes.c
+	g++ -Wall -g -c nodes.c
 
 hub_if.o: hub_if.c msgs.h nodes.h
-	g++ -Wall -c -g hub_if.c
+	g++ -Wall -g -c hub_if.c
 
 clean:
 	rm -f *.o
