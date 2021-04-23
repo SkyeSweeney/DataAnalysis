@@ -5,20 +5,20 @@
 #include <stdint.h>
 #include <pthread.h>
 
-#include "msgs.h"
+#include "macro.h"
 
 
-#define FOREACH_NODE(OP) \
-        OP(NODE_NONE)   \
-        OP(NODE_CMD)  \
-        OP(NODE_VIDEO)   \
-        OP(NODE_MAP)   \
-        OP(NODE_TIME)   \
-        OP(NODE_PLAYBACK)   \
-        OP(NODE_MAX)
+#define MAX_REGISTERED_MSGS 30
 
-#define GENERATE_ENUM(ENUM) ENUM,
-#define GENERATE_STRING(STRING) #STRING,
+#define FOREACH_NODE(OP)       \
+        OP(NODE_NONE,      0)  \
+        OP(NODE_CMD,       0)  \
+        OP(NODE_VIDEO,     0)  \
+        OP(NODE_MAP,       0)  \
+        OP(NODE_TIME,      0)  \
+        OP(NODE_PLAYBACK,  0)  \
+        OP(NODE_MAX,       0)
+
 
 typedef enum NODE_ENUM {
     FOREACH_NODE(GENERATE_ENUM)
@@ -38,16 +38,16 @@ typedef struct
 {
     int             sd;    // -1 for unused entry
     NodeType_e      nodeType;
-    uint8_t         msgIds[MSGID_MAX];  // True to send
+    uint8_t         msgIds[MAX_REGISTERED_MSGS];  // True to send
     pthread_mutex_t mutex;
 } Node_t;
 
 
-void nodesInit(void);
-void nodeInit(NodeId_t iNode);
-int  nodeFindEmpty(void);
-Node_t *nodeGet(NodeId_t nodeId);
-void nodeRelease(NodeId_t nodeId);
+void        nodesInit(void);
+void        nodeInit(NodeId_t iNode);
+int         nodeFindEmpty(void);
+Node_t     *nodeGet(NodeId_t nodeId);
+void        nodeRelease(NodeId_t nodeId);
 const char *nodeIdToName(NodeId_t nodeId);
 
 

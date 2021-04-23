@@ -1,0 +1,10 @@
+
+#ifndef __MACRO_H__
+#define __MACRO_H__
+
+#define GENERATE_ENUM(ENUM, SIZE) ENUM,
+#define GENERATE_STRING(STRING, SIZE) #STRING,
+#define GENERATE_SIZE(STRING, SIZE) SIZE,
+
+
+#endif

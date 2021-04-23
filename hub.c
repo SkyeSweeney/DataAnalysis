@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         nodeSd = accept(hubSd, &from, &len);
         printf("Got connection from TBD on socket %d\n", nodeSd);
 
-        // Find an empty control strucure for this node
+        // Find an empty control structure for this node
         nodeId = nodeFindEmpty();
 
         // If we found an empty spot
@@ -161,7 +161,7 @@ static void *nodeThread(void *parg)
     sd = pNode->sd;
     nodeRelease(nodeId);
 
-    printf("Node %d sd %d\n", nodeId, sd);
+    //printf("Node %d sd %d\n", nodeId, sd);
 
     // Do till the connection is closed
     for (;;)
@@ -252,7 +252,7 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             // If msgId is legal
             if (msgId < MSGID_MAX)
             {
-                printf("Message to route %d\n", msgId);
+                //printf("Message to route %d\n", msgId);
 
                 // For each node 
                 for (nodeId=0; nodeId<NODE_MAX; nodeId++)
@@ -269,8 +269,8 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
                         {
 
                             // Attempt to send message
-                            printf("Sending\n");
-                            ok = send(pNode->sd, pMsg, len+6, 0);
+                            //printf("Sending\n");
+                            ok = send(pNode->sd, pMsg, len+sizeof(MsgHeader_t), 0);
     
                             // If it failed, nuke the node
                             if (ok != 0)

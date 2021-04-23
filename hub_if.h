@@ -20,7 +20,7 @@ int hubif_register(MsgId_t msgid, void (*cb)(Msg_t *msg));
 
 int hubif_unregister(MsgId_t msgid);
 
-int hubif_send(Msg_t *msg);
+int hubif_send(Msg_t *msg, MsgId_e msgId);
 
 
 #endif

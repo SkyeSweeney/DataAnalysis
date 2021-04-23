@@ -26,6 +26,9 @@ BodyPlayback_t m_playbackCmd;
 
 
 
+//**********************************************************************
+//
+//**********************************************************************
 int main(int argc, char *argv[])
 {
 
@@ -44,22 +47,19 @@ int main(int argc, char *argv[])
     for (int i=0; ; i++)
     {
         sleep(1);
-        msg.hdr.SOM = 0x534B;
-        msg.hdr.msgId = MSGID_FRAME;
-        msg.hdr.source = NODE_PLAYBACK;
-        msg.hdr.length = sizeof(BodyFrame_t);
-        msg.hdr.sec = 0;
-        msg.hdr.nsec = 0;
         msg.body.frame.frame = i;
         msg.body.frame.sec   = i;
         msg.body.frame.nsec  = i;
-        hubif_send(&msg);
+        hubif_send(&msg, MSGID_FRAME);
 
     }
 
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 // Callback for a playback command message
 void cbPlayback(Msg_t *pMsg)
 {
@@ -74,6 +74,9 @@ void cbPlayback(Msg_t *pMsg)
 
 
 
+//**********************************************************************
+//
+//**********************************************************************
 // Thread to playback file
 static void *playbackThread(void *pargs)
 {

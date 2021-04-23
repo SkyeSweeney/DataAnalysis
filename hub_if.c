@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#define USE_MSG_SIZES
 #include "hub_if.h"
 #include "msgs.h"
 #include "nodes.h"
@@ -28,6 +29,9 @@ NodeId_t m_nodeId = NODE_NONE;
 void (*m_callbacks[MSGID_MAX])(Msg_t *pMsg);
 
 
+//**********************************************************************
+//
+//**********************************************************************
 int hubif_client_init(void)
 {
     int i;
@@ -85,48 +89,56 @@ int hubif_client_init(void)
 
 
 
+//**********************************************************************
+//
+//**********************************************************************
 int hubif_login(NodeId_t nodeId)
 {
     Msg_t msg;
-    msg.hdr.SOM = 0x534B;
-    msg.hdr.msgId = MSGID_LOGIN;
-    msg.hdr.source = nodeId;
-    msg.hdr.length = 0;
-    hubif_send(&msg);
     m_nodeId = nodeId;
+    hubif_send(&msg, MSGID_LOGIN);
     return 0;
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 int hubif_logout(NodeId_t nodeId)
 {
     Msg_t msg;
-    msg.hdr.SOM = 0x534B;
-    msg.hdr.msgId = MSGID_LOGOUT;
-    msg.hdr.source = nodeId;
-    msg.hdr.length = 0;
-    hubif_send(&msg);
+    m_nodeId = nodeId; // TODO: Is this needed?
+    hubif_send(&msg, MSGID_LOGOUT);
     m_nodeId = NODE_NONE;
     return 0;
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 int hubif_register(MsgId_t msgId, void (*cb)(Msg_t *msg))
 {
+    int retval;
     Msg_t msg;
     if (msgId < MSGID_MAX)
     {
         m_callbacks[msgId] = cb;
+        msg.body.reg.msgId = MSGID_FRAME;
+        msg.body.reg.add   = 1;
+        hubif_send(&msg, MSGID_REGISTER);
+        retval = 0;
     }
-    msg.hdr.SOM = 0x534B;
-    msg.hdr.msgId = MSGID_REGISTER;
-    msg.hdr.source = m_nodeId;
-    msg.hdr.length = sizeof(BodyRegister_t);
-    msg.body.reg.msgId = MSGID_FRAME;
-    msg.body.reg.add   = 1;
-    hubif_send(&msg);
-    return 0;
+    else
+    {
+        printf("Registering a bad message\n");
+        retval = 1;
+    }
+    return retval;
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 int hubif_unregister(MsgId_t msgId)
 {
     if (msgId < MSGID_MAX)
@@ -136,25 +148,60 @@ int hubif_unregister(MsgId_t msgId)
     return 0;
 }
 
-int hubif_send(Msg_t *msg)
+//**********************************************************************
+//
+//**********************************************************************
+int hubif_send(Msg_t *msg, MsgId_e msgId)
 {
     int err;
-    printf("SOM:%x msgId:%d Source:%d Length:%d\n",
-           msg->hdr.SOM,
-           msg->hdr.msgId,
-           msg->hdr.source,
-           msg->hdr.length);
-    err = send(m_sockfd, (void*)msg, sizeof(MsgHeader_t) + msg->hdr.length, 0);
-    printf("Send %ld %d %d\n", sizeof(MsgHeader_t), msg->hdr.length, err);
+
+    // Check for leacal messageId
+    if (msgId < MSGID_MAX)
+    {
+
+        // Populate the header as best we can
+        msg->hdr.SOM    = 0x534B;
+        msg->hdr.msgId  = msgId;
+        msg->hdr.source = m_nodeId;
+        msg->hdr.length = MSG_SIZES[msgId];
+        msg->hdr.sec    = 0;
+        msg->hdr.nsec   = 0;
+
+
+        if (0)
+        {
+            printf("SOM:%x msgId:%d Source:%d Length:%d\n",
+                   msg->hdr.SOM,
+                   msg->hdr.msgId,
+                   msg->hdr.source,
+                   msg->hdr.length);
+        }
+        err = send(m_sockfd, 
+                  (void*)msg, 
+                  sizeof(MsgHeader_t) + msg->hdr.length, 
+                  0);
+        if (0)
+        {
+            printf("Send %ld %d %d\n", sizeof(MsgHeader_t), msg->hdr.length, err);
+        }
+    }
+    else
+    {
+        printf("Invalid msgid in send\n");
+        err = 1;
+    }
+
     return err;
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 static void * hubif_receiveThread(void *arg)
 {
 
     Msg_t msg;
-    int   err;
     ssize_t got;
     uint16_t n;
     MsgId_t msgId;
@@ -168,7 +215,7 @@ static void * hubif_receiveThread(void *arg)
 
         // Read header
         got = read(m_sockfd, (void*)&msg.hdr, sizeof(MsgHeader_t));
-        printf("Got header %ld\n", got);
+        //printf("Got header %ld\n", got);
 
         // Check header
         if (msg.hdr.SOM != 0x534B)
@@ -181,15 +228,13 @@ static void * hubif_receiveThread(void *arg)
         // Get the message ID and size
         msgId = msg.hdr.msgId;
         n = msg.hdr.length;
-        printf("Body size is %d\n", n);
-
-        usleep(10000);
+        //printf("Body size is %d\n", n);
 
         // Read body
         got = read(m_sockfd, (void*)&msg.body, n);
         if (got != n)
         {
-            printf("Got %ld and not %d bytes\n", got, (size_t)n);
+            printf("Got %ld and not %ld bytes\n", got, (size_t)n);
         }
 
         // If a valid message id
