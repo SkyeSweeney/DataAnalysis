@@ -11,7 +11,7 @@
 //**********************************************************************
 class wxImagePanel : public wxPanel
 {
-    wxBitmap image;
+    wxBitmap m_image;
     
 public:
 
@@ -55,7 +55,9 @@ public:
     void OnAbout(wxCommandEvent& event);
 
 private:
-    wxImagePanel *drawPane;
+    wxImagePanel *m_drawPane;
+    wxTextCtrl   *m_timeTxt;
+
     // This class handles events
     DECLARE_EVENT_TABLE()
 };

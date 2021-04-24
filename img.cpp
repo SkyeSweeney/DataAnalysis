@@ -60,23 +60,25 @@ MyFrame::MyFrame(const wxString& title)
     CreateStatusBar(2);
     SetStatusText(wxT("Welcome to wxWidgets!"));
 
+
+    // Create an image panel
+    m_drawPane = new wxImagePanel(this,
+                                  wxT("output_012021.png"),
+                                  wxBITMAP_TYPE_PNG);
+
+    // Text for time
     wxTextCtrl *m_timeTxt;
     m_timeTxt = new wxTextCtrl(this, 
                                wxID_ANY, 
-                               "Single line.",
+                               "10:23:33.123456.",
                                wxDefaultPosition, 
                                wxDefaultSize,
                                wxTE_PROCESS_ENTER);
 
 
-    // Create an image panel
-    drawPane = new wxImagePanel(this,
-                                wxT("output_012021.png"),
-                                wxBITMAP_TYPE_PNG);
-
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(drawPane, 1, wxEXPAND);
-    sizer->Add(m_timeTxt, 1, wxEXPAND);
+    sizer->Add(m_drawPane, 5, wxEXPAND); // Item, proportion, flag, border
+    sizer->Add(m_timeTxt,  1, wxEXPAND, wxALIGN_CENTER, 0);
     SetSizer(sizer);
 
 
@@ -139,7 +141,7 @@ wxImagePanel::wxImagePanel(wxFrame     *parent,
     m_sn(0)
 {
     // load the file... ideally add a check to see if loading was successful
-    image.LoadFile(file, format);
+    m_image.LoadFile(file, format);
 
     m_timer.Start(30);
 
@@ -155,10 +157,9 @@ void wxImagePanel::OnTimer(wxTimerEvent & evt)
 
     sprintf(buf, "/home/skye/Projects/DataAnalysis/thumbs/output_%06d.png", m_sn);
 
-    image.LoadFile(buf, wxBITMAP_TYPE_PNG);
+    m_image.LoadFile(buf, wxBITMAP_TYPE_PNG);
     this->paintNow();
 
-    printf("LLL\n");
 }
 
 //**********************************************************************
@@ -195,7 +196,7 @@ void wxImagePanel::paintNow()
 //**********************************************************************
 void wxImagePanel::render(wxDC&  dc)
 {
-    dc.DrawBitmap( image, 0, 0, false );
+    dc.DrawBitmap( m_image, 0, 0, false );
 }
 
 

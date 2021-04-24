@@ -9,18 +9,17 @@
 
 
 #define FOREACH_MSG(OP) \
-    OP(MSGID_UNK,        0) \
-    OP(MSGID_LOGIN,      sizeof(BodyLogin_t)) \
-    OP(MSGID_LOGOUT,     sizeof(BodyLogout_t)) \
-    OP(MSGID_EXIT,       0) \
-    OP(MSGID_REGISTER,   sizeof(BodyRegister_t)) \
-    OP(MSGID_FRAME,      sizeof(BodyFrame_t)) \
-    OP(MSGID_LOG,        sizeof(BodyLog_t)) \
-    OP(MSGID_CONFIG,     sizeof(BodyConfig_t)) \
-    OP(MSGID_LOCATION,   sizeof(BodyLocation_t)) \
-    OP(MSGID_TIME,       sizeof(BodyTime_t)) \
-    OP(MSGID_PLAYBACK,   sizeof(BodyPlayback_t)) \
-    OP(MSGID_MAX,        0)
+    OP(MSGID_UNK,              0) \
+    OP(MSGID_LOGIN,            sizeof(BodyLogin_t)) \
+    OP(MSGID_LOGOUT,           sizeof(BodyLogout_t)) \
+    OP(MSGID_EXIT,             0) \
+    OP(MSGID_REGISTER,         sizeof(BodyRegister_t)) \
+    OP(MSGID_LOG,              sizeof(BodyLog_t)) \
+    OP(MSGID_VIDEO_CONFIG,     sizeof(BodyVideoConfig_t)) \
+    OP(MSGID_LOCATION,         sizeof(BodyLocation_t)) \
+    OP(MSGID_TIME,             sizeof(BodyTime_t)) \
+    OP(MSGID_PLAYBACK,         sizeof(BodyPlayback_t)) \
+    OP(MSGID_MAX,              0)
 
 
 typedef enum MSG_ENUM {
@@ -40,20 +39,26 @@ static const char *MSG_STRING[] = {
 typedef uint16_t MsgId_t;
 typedef uint16_t NodeType_t;
 
+//**********************************************************************
+// Definition of the common header
+//**********************************************************************
+#define MSG_SOM 0x534b
 #pragma pack(1)
 typedef struct MsgHeader_s
 {
-    uint16_t    SOM;      // 0x534b
+    uint16_t    SOM;      // Start of Message 0x534b
     MsgId_t     msgId;    // Message identifier (uin16_t)
     NodeType_t  source;   // Source of the message (uin16_t)
     uint16_t    length;   // Length of body (not header)
-    uint32_t    sec;      // Unix seconds
-    uint32_t    nsec;     // Nano seconds into second
+    uint32_t    sec;      // Simulation time in Unix seconds 
+    uint32_t    nsec;     // Simulation time (nano seconds into second)
 } MsgHeader_t;
 #pragma pack(0)
 
 
+//**********************************************************************
 // Login message. The type you want to login as comes from the header source
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyLogin_s
 {
@@ -61,7 +66,9 @@ typedef struct BodyLogin_s
 } BodyLogin_t;
 #pragma pack(0)
 
+//**********************************************************************
 // Logout message. Header only
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyLogout_s
 {
@@ -69,6 +76,9 @@ typedef struct BodyLogout_s
 } BodyLogout_t;
 #pragma pack(0)
 
+//**********************************************************************
+// Message to register for a message with hub
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyRegister_s
 {
@@ -77,15 +87,10 @@ typedef struct BodyRegister_s
 } BodyRegister_t;
 #pragma pack(0)
 
-#pragma pack(1)
-typedef struct BodyFrame_s
-{
-    uint32_t frame;    // Frame number to display
-    uint32_t sec;      // Whole seconds since 1970
-    uint32_t nsec;     // nano seconds into second
-} BodyFrame_t;
-#pragma pack(0)
 
+//**********************************************************************
+// Message to 
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyLog_s
 {
@@ -96,14 +101,30 @@ typedef struct BodyLog_s
 } BodyLog_t;
 #pragma pack(0)
 
+//**********************************************************************
+// Message to 
+//**********************************************************************
+#pragma pack(1)
+typedef struct videoSync_s
+{
+    uint32_t sec;        // Sim time for a specific video frame
+    uint32_t nsec;       // Sim time for a specific video frame
+    uint32_t frame;      // Video frame for a specific sim time
+} VideoSync_t;
+#pragma pack(0)
+
 #pragma pack(1)
 typedef struct BodyConfig_s
 {
-    char     videoDir[256]; // Directory where video files can be found
-    char     videoRoot[24]; // Root file name of video files
-} BodyConfig_t;
+    char        videoDir[256]; // Directory where video files can be found
+    char        videoRoot[24]; // Root file name of video files
+    VideoSync_t videoSync;     // Sim time for a specific video frame
+} BodyVideoConfig_t;
 #pragma pack(0)
 
+//**********************************************************************
+// Message to 
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyLocation_s
 {
@@ -115,11 +136,13 @@ typedef struct BodyLocation_s
 } BodyLocation_t;
 #pragma pack(0)
 
+//**********************************************************************
+// Message to transfer simulation time.
+// Leverages the time in the header
+//**********************************************************************
 #pragma pack(1)
 typedef struct BodyTime_s
 {
-    uint32_t  sec;    // Basic simulation time (epoch seconds)
-    uint32_t  nsec;   // Basic simulation time (nonos into above)
 } BodyTime_t;
 #pragma pack(0)
 
@@ -155,16 +178,14 @@ typedef struct BodyGeneric_s
 #pragma pack(1)
 typedef union Body_s
 {
-    BodyLogin_t    login;
-    BodyLogout_t   logout;
-    BodyRegister_t reg;
-    BodyFrame_t    frame;
-    BodyLog_t      log;
-    BodyConfig_t   config;
-    BodyLocation_t location;
-    BodyTime_t     time;
-    BodyPlayback_t playback;
-    BodyGeneric_t  generic;
+    BodyLogin_t       login;
+    BodyLogout_t      logout;
+    BodyRegister_t    reg;
+    BodyLog_t         log;
+    BodyVideoConfig_t videoConfig;
+    BodyLocation_t    location;
+    BodyPlayback_t    playback;
+    BodyGeneric_t     generic;
 } Body_t;
 #pragma pack(0)
 

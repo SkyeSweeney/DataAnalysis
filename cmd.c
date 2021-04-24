@@ -20,6 +20,9 @@ static char *tokens[20];
 static uint16_t nToks;
 
 
+//**********************************************************************
+//
+//**********************************************************************
 int main(int argc, char *argv[])
 {
     char *pCmdBuf;
@@ -30,6 +33,14 @@ int main(int argc, char *argv[])
     hubif_login(NODE_CMD);
 
     hubif_register(MSGID_LOG, cbLog);
+
+    // Send videoConfig message
+    Msg_t msg;
+    msg.body.videoConfig.videoSync.sec   = 1;
+    msg.body.videoConfig.videoSync.nsec  = 0;
+    msg.body.videoConfig.videoSync.frame = 0;
+    hubif_send(&msg, MSGID_VIDEO_CONFIG, 0, 0);
+
 
     while (run)
     {
@@ -78,6 +89,9 @@ int main(int argc, char *argv[])
 
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processUserCmd(char *pCmdBuf)
 {
     char *pCmd;
@@ -93,15 +107,14 @@ static void processUserCmd(char *pCmdBuf)
     pCmd = tokens[0];
 
     // switch on first token
-    if (strcmp(pCmd,"frame") == 0)
+    if (strcmp(pCmd,"time") == 0)
     {
-        if (nToks == 4)
+        if (nToks == 2)
         {
-            printf("Frame command\n");
-            msg.body.frame.frame = atoi(tokens[1]);
-            msg.body.frame.sec   = atoi(tokens[2]);
-            msg.body.frame.nsec  = atoi(tokens[3]);
-            hubif_send(&msg, MSGID_FRAME);
+            uint32_t i;
+            printf("Time command\n");
+            i = atoi(tokens[1]);
+            hubif_send(&msg, MSGID_TIME, i, 0);
         }
         else
         {
@@ -117,7 +130,7 @@ static void processUserCmd(char *pCmdBuf)
             msg.body.playback.cmd     = PLAYBACK_STOP;
             msg.body.playback.fn[0]   = 0;
             msg.body.playback.ratio   = 1.0;
-            hubif_send(&msg, MSGID_PLAYBACK);
+            hubif_send(&msg, MSGID_PLAYBACK, 0, 0);
         }
         else
         {
@@ -139,6 +152,9 @@ static void processUserCmd(char *pCmdBuf)
     
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void cbLog(Msg_t *pMsg)
 {
     printf("%i:%u <%d> %s\n",

@@ -44,14 +44,24 @@ int main(int argc, char *argv[])
     
     Msg_t msg;
 
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 1000*1000*1000/30;
+
+    uint32_t sec = 0;
+    uint32_t nsec = 0;
+
     for (int i=0; ; i++)
     {
-        sleep(1);
-        msg.body.frame.frame = i;
-        msg.body.frame.sec   = i;
-        msg.body.frame.nsec  = i;
-        hubif_send(&msg, MSGID_FRAME);
+        nanosleep(&ts, NULL);
+        hubif_send(&msg, MSGID_TIME, sec, nsec);
 
+        nsec += 1000*1000*1000/30;
+        if (nsec > 1000000000)
+        {
+            nsec -= 1000000000;
+            sec += 1;
+        }
     }
 
 }

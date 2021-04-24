@@ -96,7 +96,7 @@ int hubif_login(NodeId_t nodeId)
 {
     Msg_t msg;
     m_nodeId = nodeId;
-    hubif_send(&msg, MSGID_LOGIN);
+    hubif_send(&msg, MSGID_LOGIN, 0, 0);
     return 0;
 }
 
@@ -107,7 +107,7 @@ int hubif_logout(NodeId_t nodeId)
 {
     Msg_t msg;
     m_nodeId = nodeId; // TODO: Is this needed?
-    hubif_send(&msg, MSGID_LOGOUT);
+    hubif_send(&msg, MSGID_LOGOUT, 0, 0);
     m_nodeId = NODE_NONE;
     return 0;
 }
@@ -120,12 +120,16 @@ int hubif_register(MsgId_t msgId, void (*cb)(Msg_t *msg))
 {
     int retval;
     Msg_t msg;
+
     if (msgId < MSGID_MAX)
     {
+        // Save the callback function
         m_callbacks[msgId] = cb;
-        msg.body.reg.msgId = MSGID_FRAME;
+
+        // Send message to hub to have then send us this message
+        msg.body.reg.msgId = msgId;
         msg.body.reg.add   = 1;
-        hubif_send(&msg, MSGID_REGISTER);
+        hubif_send(&msg, MSGID_REGISTER, 0, 0);
         retval = 0;
     }
     else
@@ -149,9 +153,9 @@ int hubif_unregister(MsgId_t msgId)
 }
 
 //**********************************************************************
-//
+// Send a message to hub
 //**********************************************************************
-int hubif_send(Msg_t *msg, MsgId_e msgId)
+int hubif_send(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
 {
     int err;
 
@@ -164,8 +168,8 @@ int hubif_send(Msg_t *msg, MsgId_e msgId)
         msg->hdr.msgId  = msgId;
         msg->hdr.source = m_nodeId;
         msg->hdr.length = MSG_SIZES[msgId];
-        msg->hdr.sec    = 0;
-        msg->hdr.nsec   = 0;
+        msg->hdr.sec    = sec;
+        msg->hdr.nsec   = nsec;
 
 
         if (0)
