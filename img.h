@@ -3,20 +3,41 @@
 #define __IMG_H__
 
 #include <wx/wx.h>
+#include <wx/sizer.h>
+#include <wx/timer.h>
+
+class MyImagePanel;
+class MyFrame;
+
+//**********************************************************************
+// Main application 
+//**********************************************************************
+class MyApp: public wxApp
+{
+
+private:
+    MyFrame      *m_myFrame;
+    MyImagePanel *m_myImagePanel;
+
+public:
+    bool OnInit();
+
+};
+
 
 
 
 //**********************************************************************
 //
 //**********************************************************************
-class wxImagePanel : public wxPanel
+class MyImagePanel : public wxPanel
 {
     wxBitmap m_image;
     
 public:
 
     // Constructor
-    wxImagePanel(wxFrame* parent, wxString file, wxBitmapType format);
+    MyImagePanel(wxFrame* parent, wxString file, wxBitmapType format);
     
     void paintEvent(wxPaintEvent & evt);
     void paintNow();
@@ -55,8 +76,11 @@ public:
     void OnAbout(wxCommandEvent& event);
 
 private:
-    wxImagePanel *m_drawPane;
+    MyImagePanel *m_myImagePanel;
     wxTextCtrl   *m_timeTxt;
+    wxMenu       *m_fileMenu;
+    wxMenu       *m_helpMenu;
+    wxMenuBar    *m_menuBar;
 
     // This class handles events
     DECLARE_EVENT_TABLE()
