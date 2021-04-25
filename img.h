@@ -32,17 +32,18 @@ public:
 //**********************************************************************
 class MyImagePanel : public wxPanel
 {
-    wxBitmap m_image;
+    wxBitmap m_bitMap;
     
 public:
 
     // Constructor
-    MyImagePanel(wxFrame* parent, wxString file, wxBitmapType format);
+    MyImagePanel(wxFrame* parent, wxBitmapType format);
     
     void paintEvent(wxPaintEvent & evt);
     void paintNow();
     void render(wxDC& dc);
     void OnTimer(wxTimerEvent & evt);
+    void start();
     
     // some useful events
     /*
@@ -58,8 +59,11 @@ public:
     
     DECLARE_EVENT_TABLE()
 
+private:
     wxTimer m_timer;
     uint16_t m_sn;
+    char     m_path[128];
+    char     m_baseFn[128];
 };
 
 

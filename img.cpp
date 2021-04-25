@@ -6,21 +6,41 @@
 
 
 
+//**********************************************************************
+//  MyApp
+//**********************************************************************
+
+
+//**********************************************************************
+// OnInit
+//**********************************************************************
+bool MyApp::OnInit()
+{
+    // Make sure to call this first to be able to understand all
+    // the different image formats
+    wxInitAllImageHandlers();
+
+    // Create the main application window
+    m_myFrame = new MyFrame(wxT("Data Analysis - Video"));
+    
+    // Show it
+    m_myFrame->Show(true);
+
+    // Worked!
+    return true;
+} 
+    
+
+// This generates code that creates MyApp and starts event loop
+// One of the first things that happens is the OnInit gets called
+// Think main()
+IMPLEMENT_APP(MyApp)
 
 
 
-
-// some useful events
-/*
- void MyImagePanel::mouseMoved(wxMouseEvent& event) {}
- void MyImagePanel::mouseDown(wxMouseEvent& event) {}
- void MyImagePanel::mouseWheelMoved(wxMouseEvent& event) {}
- void MyImagePanel::mouseReleased(wxMouseEvent& event) {}
- void MyImagePanel::rightClick(wxMouseEvent& event) {}
- void MyImagePanel::mouseLeftWindow(wxMouseEvent& event) {}
- void MyImagePanel::keyPressed(wxKeyEvent& event) {}
- void MyImagePanel::keyReleased(wxKeyEvent& event) {}
- */
+//**********************************************************************
+//  MyFrame
+//**********************************************************************
 
 
 // Event table for MyFrame
@@ -63,34 +83,26 @@ MyFrame::MyFrame(const wxString& title)
 
     // Create an image panel
     m_myImagePanel = new MyImagePanel(this,
-                                  wxT("output_012021.png"),
-                                  wxBITMAP_TYPE_PNG);
-    m_myImagePanel->paintNow();
-    wxSize sz;
-    sz = m_myImagePanel->GetSize();
-    printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
+                                      wxBITMAP_TYPE_PNG);
 
     // Text for time
     m_timeTxt = new wxTextCtrl(this, 
                                wxID_ANY, 
-                               "10:23:33.123456.",
+                               "10:23:33.123456. aaaaaaaaaaaaaaaa",
                                wxDefaultPosition, 
                                wxDefaultSize,
                                wxTE_PROCESS_ENTER);
-    sz = m_timeTxt->GetSize();
-    printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
 
-
+    // Create a vertical sizer
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_myImagePanel, 5, wxEXPAND); // Item, proportion, flag, border
-    sizer->Add(m_timeTxt,  1, wxEXPAND, wxALIGN_CENTER, 0);
+    {
+        // Item, proportion, flag, border
+        sizer->Add(m_myImagePanel, 5, wxEXPAND); 
+        sizer->Add(m_timeTxt,      1, wxEXPAND, wxALIGN_CENTER, 0);
+    }    
     SetSizer(sizer);
 
-    sz = m_myImagePanel->GetSize();
-    printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
-
-    //Fit();
-
+    m_myImagePanel->start();
 
 }
 
@@ -144,15 +156,24 @@ END_EVENT_TABLE()
 // Constructor (inherits from wxPanel)
 //**********************************************************************
 MyImagePanel::MyImagePanel(wxFrame     *parent, 
-                           wxString     file, 
                            wxBitmapType format) :
     wxPanel(parent),
     m_timer(this),
     m_sn(0)
 {
-    // load the file... ideally add a check to see if loading was successful
-    m_image.LoadFile(file, format);
 
+    // Set the file name parts
+    strcpy(m_path, "/home/skye/Projects/DataAnalysis/thumbs/");
+    strcpy(m_baseFn, "output");
+}
+
+//**********************************************************************
+// Start timer
+//**********************************************************************
+void MyImagePanel::start()
+{
+
+    // Start the timer to go off every 30 ms
     m_timer.Start(30);
 
 }
@@ -162,16 +183,32 @@ MyImagePanel::MyImagePanel(wxFrame     *parent,
 //**********************************************************************
 void MyImagePanel::OnTimer(wxTimerEvent & evt)
 {
-    char buf[128];
+    char buf[300];
+    bool ok;
 
-    m_sn ++;
+    m_sn++;
 
+    // Create the filename
     sprintf(buf, 
-            "/home/skye/Projects/DataAnalysis/thumbs/output_%06d.png", 
+            "%s/%s_%06d.png",
+            m_path,
+            m_baseFn,
             m_sn);
 
-    m_image.LoadFile(buf, wxBITMAP_TYPE_PNG);
+    // Load the file into the image
+    ok = m_bitMap.LoadFile(buf, wxBITMAP_TYPE_PNG);
+    (void)ok;
+
+    // Force a paint
     this->paintNow();
+
+    //wxSize sz;
+    //sz = this->GetSize();
+    //printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
+
+    wxSize sz;
+    sz = m_bitMap.GetSize();
+    printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
 
 }
 
@@ -182,8 +219,10 @@ void MyImagePanel::OnTimer(wxTimerEvent & evt)
 //**********************************************************************
 void MyImagePanel::paintEvent(wxPaintEvent & evt)
 {
-    // depending on your system you may need to look at double-buffered dcs
+    // Create a DC for this ImagePanel
     wxPaintDC dc(this);
+
+    // Force the render
     render(dc);
 }
 
@@ -197,8 +236,10 @@ void MyImagePanel::paintEvent(wxPaintEvent & evt)
 //**********************************************************************
 void MyImagePanel::paintNow()
 {
-    // depending on your system you may need to look at double-buffered dcs
+    // Create a DC for this ImagePanel
     wxClientDC dc(this);
+
+    // Force the render
     render(dc);
 }
 
@@ -209,7 +250,11 @@ void MyImagePanel::paintNow()
 //**********************************************************************
 void MyImagePanel::render(wxDC&  dc)
 {
-    dc.DrawBitmap( m_image, 0, 0, false );
+    // Draw the bitmap (video image) to the DC
+    if (m_bitMap.IsOk())
+    {
+        dc.DrawBitmap( m_bitMap, 0, 0, false );
+    }
 }
 
 
@@ -217,28 +262,14 @@ void MyImagePanel::render(wxDC&  dc)
 
 
 
-//**********************************************************************
-// OnInit
-//**********************************************************************
-bool MyApp::OnInit()
-{
-    // Make sure to call this first to be able to understand all
-    // the different image formats
-    wxInitAllImageHandlers();
-
-    // Create the main application window
-    m_myFrame = new MyFrame(wxT("Data Analysis - Video"));
-    
-    // Show it
-    m_myFrame->Show(true);
-
-    // Worked!
-    return true;
-} 
-    
-
-// This generates code that creates MyApp and starts event loop
-// One of the first things that happens is the OnInit gets called
-// Think main()
-IMPLEMENT_APP(MyApp)
-
+// some useful events
+/*
+ void MyImagePanel::mouseMoved(wxMouseEvent& event) {}
+ void MyImagePanel::mouseDown(wxMouseEvent& event) {}
+ void MyImagePanel::mouseWheelMoved(wxMouseEvent& event) {}
+ void MyImagePanel::mouseReleased(wxMouseEvent& event) {}
+ void MyImagePanel::rightClick(wxMouseEvent& event) {}
+ void MyImagePanel::mouseLeftWindow(wxMouseEvent& event) {}
+ void MyImagePanel::keyPressed(wxKeyEvent& event) {}
+ void MyImagePanel::keyReleased(wxKeyEvent& event) {}
+ */
