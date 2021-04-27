@@ -3,6 +3,68 @@
 #include <wx/timer.h>
 
 #include "img.h"
+#include "hub_if.h"
+#include "nodes.h"
+#include "msgs.h"
+
+
+static void cbTime(Msg_t *pMsg);
+static void cbVideoConfig(Msg_t *pMsg);
+
+static pthread_mutex_t g_displayMutex;
+static pthread_t       g_displayThread;
+static sem_t           g_displaySem;
+
+static VideoSync_t     g_videoSync;
+
+static uint32_t        g_sec;
+static uint32_t        g_nsec;
+static uint32_t        g_sn;
+
+// Thread to process image requests from queue
+static void *displayThread(void *pargs)
+{
+    for (;;)
+    {
+        // Wait for receiver to notify us we hae a new frame to display
+        sem_wait(&g_displaySem);
+
+        // If frame is cached
+        if (0)
+        {
+            // Get image from cache
+        } else {
+            // Get image form file
+            // Add it to cache
+        }
+
+        // Display the image
+        // Display the frame and time
+        //
+        if (g_videoSync.sec == 0)
+        {
+            printf("VideoConfig not received yet\n");
+            g_sn = 0;
+        }
+        else
+        {
+            int32_t dt;
+            // Difference in time in usec
+            // TODO Fix up for signed values
+            dt = (g_sec - g_videoSync.sec)*1000 +
+                 (g_nsec - g_videoSync.nsec)/1000000;
+            g_sn = dt / (1.0/30.0 * 1000);
+        }
+
+        printf("Displaying image %d\n", g_sn);
+
+        // Release mutux to allow the display of next image
+        pthread_mutex_unlock(&g_displayMutex);
+    }
+    return NULL;
+}
+
+
 
 
 
@@ -26,9 +88,59 @@ bool MyApp::OnInit()
     // Show it
     m_myFrame->Show(true);
 
+    hubif_client_init();
+    hubif_login(NODE_VIDEO);
+
+    hubif_register(MSGID_TIME,         cbTime);
+    hubif_register(MSGID_VIDEO_CONFIG, cbVideoConfig);
+
+    // Start image display thread
+    pthread_create(&g_displayThread, NULL, displayThread, NULL);
+
     // Worked!
     return true;
-} 
+}  
+
+//**********************************************************************
+//
+//**********************************************************************
+void cbTime(Msg_t *pMsg)
+{
+    int err;
+
+    // Try to take the mutex
+    err = pthread_mutex_trylock(&g_displayMutex);
+
+    // Able to take mutux
+    if (err == 0)
+    {
+        // Put message data into memory
+        g_sec   =  pMsg->hdr.sec;
+        g_nsec  =  pMsg->hdr.nsec;
+
+        // Signal thread with semaphore
+        sem_post(&g_displaySem);
+    }
+
+    printf("Got a Time: sec:%u nsec:%u\n",
+           pMsg->hdr.sec,
+           pMsg->hdr.nsec);
+
+}
+
+
+//**********************************************************************
+//
+//**********************************************************************
+void cbVideoConfig(Msg_t *pMsg)
+{
+    // Put message data into memory
+    g_videoSync = pMsg->body.videoConfig.videoSync;
+
+    printf("Got a VideoConfig\n");
+
+}
+
     
 
 // This generates code that creates MyApp and starts event loop
@@ -82,8 +194,8 @@ MyFrame::MyFrame(const wxString& title)
     SetStatusText(wxT("Welcome to wxWidgets!"));
 
     // Create an image panel
-    m_myImagePanel = new MyImagePanel(this,
-                                      wxBITMAP_TYPE_PNG);
+    m_myImagePanel = new MyImagePanel(this, wxBITMAP_TYPE_PNG);
+
 
     // Text for time
     m_timeTxt = new wxTextCtrl(this, 
@@ -102,7 +214,15 @@ MyFrame::MyFrame(const wxString& title)
     }    
     SetSizer(sizer);
 
+    wxSize sz;
+    sz = m_myImagePanel->GetClientSize();
+    printf("%d %d\n", sz.GetWidth(), sz.GetHeight());
+
     m_myImagePanel->start();
+
+    // Set position of window
+    wxPoint pos(440,40);
+    this->SetPosition(pos);
 
 }
 
@@ -165,6 +285,9 @@ MyImagePanel::MyImagePanel(wxFrame     *parent,
     // Set the file name parts
     strcpy(m_path, "/home/skye/Projects/DataAnalysis/thumbs/");
     strcpy(m_baseFn, "output");
+
+    //parent->SetWidth(320);
+    //parent->SetHeight(180);
 }
 
 //**********************************************************************

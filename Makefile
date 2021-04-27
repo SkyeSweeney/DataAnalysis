@@ -48,7 +48,7 @@ minimal.o: minimal.cpp
 
 
 img: img.o img.h
-	g++ -o img img.o `wx-config --libs`
+	g++ -Wall -g -o img -pthread img.o `wx-config --libs` nodes.o hub_if.o
 
 
 img.o: img.cpp

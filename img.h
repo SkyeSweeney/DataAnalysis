@@ -2,9 +2,20 @@
 #ifndef __IMG_H__
 #define __IMG_H__
 
+#include <stdio.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 #include <wx/wx.h>
 #include <wx/sizer.h>
 #include <wx/timer.h>
+
+#include "hub_if.h"
+#include "nodes.h"
+#include "msgs.h"
+
 
 class MyImagePanel;
 class MyFrame;
@@ -18,6 +29,7 @@ class MyApp: public wxApp
 private:
     MyFrame      *m_myFrame;
     MyImagePanel *m_myImagePanel;
+
 
 public:
     bool OnInit();
