@@ -1,55 +1,58 @@
 
+CXXFLAGS = -g -Wall -std=c++11
+
+
 all: hub video cmd minimal img playback
 
 hub: hub.o nodes.o
-	g++ -Wall -g -o hub -pthread -lreadline hub.o nodes.o -lreadline
+	g++ ${CXXFLAGS} -o $@ -pthread -lreadline hub.o nodes.o -lreadline
 
 video: video.o nodes.o hub_if.o
-	g++ -Wall -g -o video -pthread video.o nodes.o hub_if.o
+	g++ ${CXXFLAGS} -o $@ -pthread video.o nodes.o hub_if.o
 
 cmd: cmd.o nodes.o hub_if.o
-	g++ -Wall -g -o cmd cmd.c nodes.o hub_if.o -lreadline -pthread
+	g++ ${CXXFLAGS} -o $@ cmd.cpp nodes.o hub_if.o -lreadline -pthread
 
 playback: playback.o nodes.o hub_if.o
-	g++ -Wall -g -o playback -pthread playback.o nodes.o hub_if.o
+	g++ ${CXXFLAGS} -o $@ -pthread playback.o nodes.o hub_if.o
+
+hub.o: hub.cpp msgs.h nodes.h
+	g++ ${CXXFLAGS} -pthread -c hub.cpp
+
+video.o: video.cpp msgs.h nodes.h
+	g++ ${CXXFLAGS} -pthread -c video.cpp
+
+cmd.o: cmd.cpp msgs.h nodes.h
+	g++ ${CXXFLAGS} -pthread -c cmd.cpp
+
+playback.o: playback.cpp msgs.h nodes.h
+	g++ ${CXXFLAGS} -pthread -c playback.cpp
+
+nodes.o: nodes.cpp nodes.h
+	g++ ${CXXFLAGS} -c nodes.cpp
+
+hub_if.o: hub_if.cpp msgs.h nodes.h
+	g++ ${CXXFLAGS} -c hub_if.cpp
 
 
-hub.o: hub.c msgs.h nodes.h
-	g++ -Wall -g -pthread -c hub.c
+minimal: minimal.o
+	g++ ${CXXFLAGS} -o $@ minimal.o `wx-config --libs`
 
-video.o: video.c msgs.h nodes.h
-	g++ -Wall -g -pthread -c video.c
 
-cmd.o: cmd.c msgs.h nodes.h
-	g++ -Wall -g -pthread -c cmd.c
+minimal.o: minimal.cpp
+	g++ ${CXXFLAGS} -c `wx-config --cxxflags` minimal.cpp
 
-playback.o: playback.c msgs.h nodes.h
-	g++ -Wall -g -pthread -c playback.c
 
-nodes.o: nodes.c nodes.h
-	g++ -Wall -g -c nodes.c
+img: img.o img.h nodes.o 
+	g++ ${CXXFLAGS} -o $@ -pthread img.o `wx-config --libs` nodes.o hub_if.o
 
-hub_if.o: hub_if.c msgs.h nodes.h
-	g++ -Wall -g -c hub_if.c
+
+img.o: img.cpp
+	g++ ${CXXFLAGS} -c `wx-config --cxxflags` img.cpp
+
 
 clean:
 	rm -f *.o
 	rm -f hub
 	rm -f video
 	rm -f cmd
-
-
-minimal: minimal.o
-	g++ -o minimal minimal.o `wx-config --libs`
-
-
-minimal.o: minimal.cpp
-	g++ -c -Wall `wx-config --cxxflags` minimal.cpp
-
-
-img: img.o img.h
-	g++ -Wall -g -o img -pthread img.o `wx-config --libs` nodes.o hub_if.o
-
-
-img.o: img.cpp
-	g++ -c -Wall `wx-config --cxxflags` img.cpp

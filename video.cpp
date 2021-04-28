@@ -33,11 +33,14 @@ int main(int argc, char *argv[])
     m_videoSync.sec   = 0;
     m_videoSync.nsec  = 0;
 
-    hubif_client_init();
-    hubif_login(NODE_VIDEO);
+    HubIf *pHubIf;
+    pHubIf = new HubIf();
 
-    hubif_register(MSGID_TIME,         cbTime);
-    hubif_register(MSGID_VIDEO_CONFIG, cbVideoConfig);
+    pHubIf->client_init();
+    pHubIf->login(NODE_VIDEO);
+
+    pHubIf->registerCb(MSGID_TIME,         cbTime);
+    pHubIf->registerCb(MSGID_VIDEO_CONFIG, cbVideoConfig);
 
     // Start image display thread
     pthread_create(&m_displayThread, NULL, displayThread, NULL);

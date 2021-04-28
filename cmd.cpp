@@ -12,7 +12,7 @@
 #include "msgs.h"
 
 static void cbLog(Msg_t *pMsg);
-static void processUserCmd(char *pCmdBuf);
+static void processUserCmd(HubIf *pHubIf, char *pCmdBuf);
 static void CmdSplitString(char *str);
 
 static int run = 1;
@@ -29,17 +29,20 @@ int main(int argc, char *argv[])
     char userPrompt[] = "> ";
     int  n;
 
-    hubif_client_init();
-    hubif_login(NODE_CMD);
+    HubIf *pHubIf;
+    pHubIf = new HubIf();
 
-    hubif_register(MSGID_LOG, cbLog);
+    pHubIf->client_init();
+    pHubIf->login(NODE_CMD);
+
+    pHubIf->registerCb(MSGID_LOG, cbLog);
 
     // Send videoConfig message
     Msg_t msg;
     msg.body.videoConfig.videoSync.sec   = 1;
     msg.body.videoConfig.videoSync.nsec  = 0;
     msg.body.videoConfig.videoSync.frame = 0;
-    hubif_send(&msg, MSGID_VIDEO_CONFIG, 0, 0);
+    pHubIf->sendMsg(&msg, MSGID_VIDEO_CONFIG, 0, 0);
 
 
     while (run)
@@ -75,7 +78,7 @@ int main(int argc, char *argv[])
         if (n > 1)
         {
             // Process user command
-            processUserCmd(pCmdBuf);
+            processUserCmd(pHubIf, pCmdBuf);
         }
 
         // Free the buffer allocated by getline
@@ -83,7 +86,7 @@ int main(int argc, char *argv[])
 
     }
 
-    hubif_logout(NODE_CMD);
+    pHubIf->logout(NODE_CMD);
 
     return 0;
 
@@ -92,7 +95,7 @@ int main(int argc, char *argv[])
 //**********************************************************************
 //
 //**********************************************************************
-static void processUserCmd(char *pCmdBuf)
+static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
 {
     char *pCmd;
     Msg_t msg;
@@ -114,7 +117,7 @@ static void processUserCmd(char *pCmdBuf)
             uint32_t i;
             printf("Time command\n");
             i = atoi(tokens[1]);
-            hubif_send(&msg, MSGID_TIME, i, 0);
+            pHubIf->sendMsg(&msg, MSGID_TIME, i, 0);
         }
         else
         {
@@ -130,7 +133,7 @@ static void processUserCmd(char *pCmdBuf)
             msg.body.playback.cmd     = PLAYBACK_STOP;
             msg.body.playback.fn[0]   = 0;
             msg.body.playback.ratio   = 1.0;
-            hubif_send(&msg, MSGID_PLAYBACK, 0, 0);
+            pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
         }
         else
         {

@@ -35,10 +35,13 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&m_displayMutex, NULL);
     sem_init(&m_cmdSem, 0, 0);
 
-    hubif_client_init();
-    hubif_login(NODE_PLAYBACK);
+    HubIf *pHubIf;
+    pHubIf = new HubIf();
 
-    hubif_register(MSGID_PLAYBACK, cbPlayback);
+    pHubIf->client_init();
+    pHubIf->login(NODE_PLAYBACK);
+
+    pHubIf->registerCb(MSGID_PLAYBACK, cbPlayback);
 
     pthread_create(&m_playbackThread, NULL, playbackThread, NULL);
     
@@ -54,7 +57,7 @@ int main(int argc, char *argv[])
     for (int i=0; ; i++)
     {
         nanosleep(&ts, NULL);
-        hubif_send(&msg, MSGID_TIME, sec, nsec);
+        pHubIf->sendMsg(&msg, MSGID_TIME, sec, nsec);
 
         nsec += 1000*1000*1000/30;
         if (nsec > 1000000000)

@@ -9,18 +9,35 @@
 #include "msgs.h"
 #include "nodes.h"
 
+class HubIf
+{
 
-int hubif_client_init(void);
+    public:
 
-int hubif_login(NodeId_t nodeId);
+        HubIf();
 
-int hubif_logout(NodeId_t nodeId);
+        ~HubIf();
 
-int hubif_register(MsgId_t msgid, void (*cb)(Msg_t *msg));
+        int client_init(void);
 
-int hubif_unregister(MsgId_t msgid);
+        int login(NodeId_t nodeId);
+      
+        int logout(NodeId_t nodeId);
+        
+        int registerCb(MsgId_t msgid, void (*cb)(Msg_t *msg));
+        
+        int unregisterCb(MsgId_t msgid);
+        
+        int sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec);
 
-int hubif_send(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec);
+    private:
 
+        int       m_sockFd;
+        pthread_t m_thread_id;
+        NodeId_t  m_nodeId = NODE_NONE;
+
+        void (*m_callbacks[MSGID_MAX])(Msg_t *pMsg);
+
+};
 
 #endif

@@ -13,26 +13,40 @@
 #include "msgs.h"
 #include "nodes.h"
 
-static void * hubif_receiveThread(void *arg);
+static void * receiverThread(void *arg);
 
 #define SA struct sockaddr
+
+typedef struct ReceiverThreadArgs_s
+{
+    HubIf *pHubIf;
+    int    sockFd;
+} ReceiverThreadArgs_t;
 
 
 //######################################################################
 //Command interface for Data Analysis
 //######################################################################
 
-int m_sockfd;
-pthread_t m_thread_id;
-NodeId_t m_nodeId = NODE_NONE;
 
-void (*m_callbacks[MSGID_MAX])(Msg_t *pMsg);
+//**********************************************************************
+// Constructor
+//**********************************************************************
+HubIf::HubIf()
+{
+}
 
+//**********************************************************************
+// Destructor
+//**********************************************************************
+HubIf::~HubIf()
+{
+}
 
 //**********************************************************************
 //
 //**********************************************************************
-int hubif_client_init(void)
+int HubIf::client_init(void)
 {
     int i;
     struct sockaddr_in servaddr;
@@ -43,8 +57,8 @@ int hubif_client_init(void)
     }
 
     // Create raw TCP socket
-    m_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (m_sockfd == -1) 
+    m_sockFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (m_sockFd == -1) 
     {
         printf("socket creation failed...\n");
         exit(0);
@@ -63,7 +77,7 @@ int hubif_client_init(void)
 
     int flag = 1;  
     int err;
-    err = setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    err = setsockopt(m_sockFd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
     if (err == -1)
     {
         printf("setsockopt fail");  
@@ -71,7 +85,7 @@ int hubif_client_init(void)
 
 
     // Connect the client socket to server socket
-    if (connect(m_sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) 
+    if (connect(m_sockFd, (SA*)&servaddr, sizeof(servaddr)) != 0) 
     {
         printf("connection with the server failed...\n");
         exit(0);
@@ -81,8 +95,12 @@ int hubif_client_init(void)
         printf("connected to the server..\n");
     }
 
+    ReceiverThreadArgs_t rta;
+    rta.pHubIf = this;
+    rta.sockFd = m_sockFd;
+
     // Start receiver thread
-    pthread_create(&m_thread_id, NULL, hubif_receiveThread, NULL);
+    pthread_create(&m_thread_id, NULL, receiverThread, (void *)&rta);
 
     return 0;
 }
@@ -90,33 +108,33 @@ int hubif_client_init(void)
 
 
 //**********************************************************************
-//
+// Login to the remote hub
 //**********************************************************************
-int hubif_login(NodeId_t nodeId)
+int HubIf::login(NodeId_t nodeId)
 {
     Msg_t msg;
     m_nodeId = nodeId;
-    hubif_send(&msg, MSGID_LOGIN, 0, 0);
+    this->sendMsg(&msg, MSGID_LOGIN, 0, 0);
     return 0;
 }
 
 //**********************************************************************
-//
+// Logout of the remote hub
 //**********************************************************************
-int hubif_logout(NodeId_t nodeId)
+int HubIf::logout(NodeId_t nodeId)
 {
     Msg_t msg;
     m_nodeId = nodeId; // TODO: Is this needed?
-    hubif_send(&msg, MSGID_LOGOUT, 0, 0);
+    this->sendMsg(&msg, MSGID_LOGOUT, 0, 0);
     m_nodeId = NODE_NONE;
     return 0;
 }
 
 
 //**********************************************************************
-//
+// Register a callback to handle a specific message
 //**********************************************************************
-int hubif_register(MsgId_t msgId, void (*cb)(Msg_t *msg))
+int HubIf::registerCb(MsgId_t msgId, void (*cb)(Msg_t *msg))
 {
     int retval;
     Msg_t msg;
@@ -129,7 +147,7 @@ int hubif_register(MsgId_t msgId, void (*cb)(Msg_t *msg))
         // Send message to hub to have then send us this message
         msg.body.reg.msgId = msgId;
         msg.body.reg.add   = 1;
-        hubif_send(&msg, MSGID_REGISTER, 0, 0);
+        this->sendMsg(&msg, MSGID_REGISTER, 0, 0);
         retval = 0;
     }
     else
@@ -141,9 +159,9 @@ int hubif_register(MsgId_t msgId, void (*cb)(Msg_t *msg))
 }
 
 //**********************************************************************
-//
+// Unregister a callback for the specific messageId
 //**********************************************************************
-int hubif_unregister(MsgId_t msgId)
+int HubIf::unregisterCb(MsgId_t msgId)
 {
     if (msgId < MSGID_MAX)
     {
@@ -155,7 +173,7 @@ int hubif_unregister(MsgId_t msgId)
 //**********************************************************************
 // Send a message to hub
 //**********************************************************************
-int hubif_send(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
+int HubIf::sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
 {
     int err;
 
@@ -180,13 +198,15 @@ int hubif_send(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
                    msg->hdr.source,
                    msg->hdr.length);
         }
-        err = send(m_sockfd, 
+        err = send(m_sockFd, 
                   (void*)msg, 
                   sizeof(MsgHeader_t) + msg->hdr.length, 
                   0);
         if (0)
         {
-            printf("Send %ld %d %d\n", sizeof(MsgHeader_t), msg->hdr.length, err);
+            printf("Send %ld %d %d\n", 
+                   sizeof(MsgHeader_t), 
+                   msg->hdr.length, err);
         }
     }
     else
@@ -200,15 +220,23 @@ int hubif_send(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
 
 
 //**********************************************************************
-//
+// Receiver thread
 //**********************************************************************
-static void * hubif_receiveThread(void *arg)
+static void * receiverThread(void *arg)
 {
 
-    Msg_t msg;
-    ssize_t got;
+    Msg_t    msg;
+    ssize_t  got;
     uint16_t n;
-    MsgId_t msgId;
+    MsgId_t  msgId;
+    int      sockFd;
+    HubIf   *pHubIf;
+
+    // Extract arguments from structure
+    ReceiverThreadArgs_t *rta;
+    rta = (ReceiverThreadArgs_t *)arg;
+    sockFd = rta->sockFd;
+    pHubIf = rta->pHubIf;
 
     // Do forever
     for (;;)
@@ -218,7 +246,7 @@ static void * hubif_receiveThread(void *arg)
         memset(&msg, 0xff, sizeof(msg));
 
         // Read header
-        got = read(m_sockfd, (void*)&msg.hdr, sizeof(MsgHeader_t));
+        got = read(sockFd, (void*)&msg.hdr, sizeof(MsgHeader_t));
         //printf("Got header %ld\n", got);
 
         // Check header
@@ -235,7 +263,7 @@ static void * hubif_receiveThread(void *arg)
         //printf("Body size is %d\n", n);
 
         // Read body
-        got = read(m_sockfd, (void*)&msg.body, n);
+        got = read(sockFd, (void*)&msg.body, n);
         if (got != n)
         {
             printf("Got %ld and not %ld bytes\n", got, (size_t)n);
@@ -244,11 +272,13 @@ static void * hubif_receiveThread(void *arg)
         // If a valid message id
         if (msgId < MSGID_MAX)
         {
+#if 0
             // If a defined callback
             if (m_callbacks[msgId] != NULL)
             {
                 m_callbacks[msgId](&msg);
             }
+#endif
 
         }
 

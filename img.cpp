@@ -88,11 +88,14 @@ bool MyApp::OnInit()
     // Show it
     m_myFrame->Show(true);
 
-    hubif_client_init();
-    hubif_login(NODE_VIDEO);
+    HubIf *pHubIf;
+    pHubIf = new HubIf();
 
-    hubif_register(MSGID_TIME,         cbTime);
-    hubif_register(MSGID_VIDEO_CONFIG, cbVideoConfig);
+    pHubIf->client_init();
+    pHubIf->login(NODE_VIDEO);
+
+    pHubIf->registerCb(MSGID_TIME,         cbTime);
+    pHubIf->registerCb(MSGID_VIDEO_CONFIG, cbVideoConfig);
 
     // Start image display thread
     pthread_create(&g_displayThread, NULL, displayThread, NULL);

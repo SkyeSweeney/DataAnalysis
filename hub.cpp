@@ -30,6 +30,9 @@ static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg);
 static void processExit(NodeId_t nodeId, Msg_t *pMsg);
 
+//**********************************************************************
+//
+//**********************************************************************
 int main(int argc, char *argv[])
 {
     int                hubSd;
@@ -101,6 +104,9 @@ int main(int argc, char *argv[])
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 static void *userThread(void *parg)
 {
 
@@ -142,6 +148,9 @@ static void *userThread(void *parg)
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 // Thread to handle incoming messages from one node
 // The nodeId of the node we are handling is passed in vias parg
 static void *nodeThread(void *parg)
@@ -210,6 +219,9 @@ static void *nodeThread(void *parg)
 }
 
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
 {
     MsgId_e    msgId;
@@ -293,6 +305,9 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
     
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
 {
     Node_t *pNode;
@@ -302,6 +317,9 @@ static void processLogin(NodeId_t nodeId, Msg_t *pMsg)
     nodeRelease(nodeId);
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
 {
     Node_t *pNode;
@@ -312,6 +330,9 @@ static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
     nodeRelease(nodeId);
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
 {
     MsgId_t msgId;
@@ -326,6 +347,9 @@ static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
     nodeRelease(nodeId);
 }
 
+//**********************************************************************
+//
+//**********************************************************************
 static void processExit(NodeId_t nodeId, Msg_t *pMsg)
 {
     printf("Exit\n");
