@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <functional>
 
 #define USE_MSG_SIZES
 #include "hub_if.h"
@@ -134,7 +135,7 @@ int HubIf::logout(NodeId_t nodeId)
 //**********************************************************************
 // Register a callback to handle a specific message
 //**********************************************************************
-int HubIf::registerCb(MsgId_t msgId, void (*cb)(Msg_t *msg))
+int HubIf::registerCb(MsgId_t msgId, std::function<void(Msg_t*)>cb)
 {
     int retval;
     Msg_t msg;
@@ -272,13 +273,12 @@ static void * receiverThread(void *arg)
         // If a valid message id
         if (msgId < MSGID_MAX)
         {
-#if 0
+
             // If a defined callback
-            if (m_callbacks[msgId] != NULL)
+            if (pHubIf->m_callbacks[msgId] != NULL)
             {
-                m_callbacks[msgId](&msg);
+                pHubIf->m_callbacks[msgId](&msg);
             }
-#endif
 
         }
 

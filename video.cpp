@@ -5,6 +5,11 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#include <functional>
+
+using namespace std::placeholders; // for `_1`
+
+
 
 #include "hub_if.h"
 #include "nodes.h"
@@ -39,8 +44,11 @@ int main(int argc, char *argv[])
     pHubIf->client_init();
     pHubIf->login(NODE_VIDEO);
 
-    pHubIf->registerCb(MSGID_TIME,         cbTime);
-    pHubIf->registerCb(MSGID_VIDEO_CONFIG, cbVideoConfig);
+    std::function<void(Msg_t *)> fTime = cbTime;
+    pHubIf->registerCb(MSGID_TIME,         fTime);
+
+    std::function<void(Msg_t *)> fVideoConfig = cbVideoConfig;
+    pHubIf->registerCb(MSGID_VIDEO_CONFIG,         fVideoConfig);
 
     // Start image display thread
     pthread_create(&m_displayThread, NULL, displayThread, NULL);
