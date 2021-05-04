@@ -16,6 +16,7 @@
 #include <pthread.h>
 
 
+#define USE_MSG_STRING
 #include "msgs.h"
 #include "nodes.h"
 #include "hub_if.h"
@@ -29,6 +30,9 @@ static void processLogin(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg);
 static void processExit(NodeId_t nodeId, Msg_t *pMsg);
+
+static bool m_verbose = false;
+static bool m_run  = true;
 
 //**********************************************************************
 //
@@ -66,7 +70,7 @@ int main(int argc, char *argv[])
     listen(hubSd, 10); 
 
     // Do forever
-    for (; ; )
+    while (m_run)
     {
 
         // Accept connection
@@ -101,6 +105,9 @@ int main(int argc, char *argv[])
 
     }
 
+    // Kill background thread
+    m_run = false;
+
 }
 
 
@@ -113,34 +120,53 @@ static void *userThread(void *parg)
     int i;
     Node_t  *pNode;
     char    *pCmdBuf;
+    char    *pTok;
 
     for (;;)
     {
         // Get a user command
-        pCmdBuf = readline("Cmd> ");
+        pCmdBuf = readline("Hub> ");
 
         // Parse command
+        pTok = strtok(pCmdBuf, " ");
 
-        // Switch based on command
-        switch(1)
+        if (pTok == NULL) continue;
+
+        // Exit
+        if (strcasecmp(pTok, "Exit") == 0)
         {
-            case 1:
-
-                printf("| id | sd  | NodeType             |\n");
-                for (i=0; i<NODE_MAX; i++)
-                {
-                    // Get the socket we are to use
-                    pNode = nodeGet(i);
-                    printf("| %02d | %03d | %-20s |\n", 
-                           i, 
-                           pNode->sd, 
-                           nodeIdToName(pNode->nodeType));
-                    nodeRelease(i);
-                }
-                break;
-            default:
-                break;
+            break;
         }
+
+        else if (strcasecmp(pTok, "who") == 0)
+        {
+
+            printf("| id | sd  | NodeType             |\n");
+            for (i=0; i<NODE_MAX; i++)
+            {
+                // Get the socket we are to use
+                pNode = nodeGet(i);
+                printf("| %02d | %03d | %-20s |\n", 
+                       i, 
+                       pNode->sd, 
+                      nodeIdToName(pNode->nodeType));
+                nodeRelease(i);
+            }
+        }
+
+        else if (strcasecmp(pTok, "verbose") == 0)
+        {
+            m_verbose = true;
+        }
+        else if (strcasecmp(pTok, "terse") == 0)
+        {
+            m_verbose = false;
+        }
+        else
+        {
+            printf("Invalid command <%s>\n", pTok);
+        }
+
         free(pCmdBuf);
 
     }
@@ -173,7 +199,7 @@ static void *nodeThread(void *parg)
     //printf("Node %d sd %d\n", nodeId, sd);
 
     // Do till the connection is closed
-    for (;;)
+    while (m_run)
     {
 
         // Read the next header into the message buffer
@@ -264,7 +290,12 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             // If msgId is legal
             if (msgId < MSGID_MAX)
             {
-                //printf("Message to route %d\n", msgId);
+                if (m_verbose)
+                {
+                    printf("Message to route %s (%d)\n", 
+                            MSG_STRING[msgId],
+                            msgId);
+                }
 
                 // For each node 
                 for (nodeId=0; nodeId<NODE_MAX; nodeId++)
