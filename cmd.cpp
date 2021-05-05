@@ -125,11 +125,22 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
         }
     }
 
-    else if (strcmp(pCmd,"playback") == 0)
+    else if (strcmp(pCmd,"sync") == 0)
     {
-        if (nToks > 0)
+
+        // Send videoConfig message
+        Msg_t msg;
+        msg.body.videoConfig.videoSync.sec   = 1;
+        msg.body.videoConfig.videoSync.nsec  = 0;
+        msg.body.videoConfig.videoSync.frame = 0;
+        pHubIf->sendMsg(&msg, MSGID_VIDEO_CONFIG, 0, 0);
+    }
+
+    else if (strcmp(pCmd,"stop") == 0)
+    {
+        if (nToks == 1 )
         {
-            printf("Playback command\n");
+            printf("Stop command\n");
             msg.body.playback.cmd     = PLAYBACK_STOP;
             msg.body.playback.fn[0]   = 0;
             msg.body.playback.ratio   = 1.0;
@@ -140,6 +151,23 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
             printf("Wrong number of tokens\n");
         }
     }
+
+    else if (strcmp(pCmd,"start") == 0)
+    {
+        if (nToks == 1 )
+        {
+            printf("Stop command\n");
+            msg.body.playback.cmd     = PLAYBACK_PLAY;
+            msg.body.playback.fn[0]   = 0;
+            msg.body.playback.ratio   = 1.0;
+            pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            printf("Wrong number of tokens\n");
+        }
+    }
+
     else if (strcmp(pCmd,"exit") == 0)
     {
         run = 0;

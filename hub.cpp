@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 
 
 //**********************************************************************
-//
+// Thread to process user input
 //**********************************************************************
 static void *userThread(void *parg)
 {
@@ -130,14 +130,16 @@ static void *userThread(void *parg)
         // Parse command
         pTok = strtok(pCmdBuf, " ");
 
+        // Skip blank entries
         if (pTok == NULL) continue;
 
-        // Exit
+        // EXIT
         if (strcasecmp(pTok, "Exit") == 0)
         {
             break;
         }
 
+        // WHO
         else if (strcasecmp(pTok, "who") == 0)
         {
 
@@ -154,19 +156,25 @@ static void *userThread(void *parg)
             }
         }
 
+        // VERBOSE
         else if (strcasecmp(pTok, "verbose") == 0)
         {
             m_verbose = true;
         }
+
+        // TERSE
         else if (strcasecmp(pTok, "terse") == 0)
         {
             m_verbose = false;
         }
+
+        // UNKNOWN
         else
         {
             printf("Invalid command <%s>\n", pTok);
         }
 
+        // Free memory allocated by readline
         free(pCmdBuf);
 
     }
@@ -175,10 +183,9 @@ static void *userThread(void *parg)
 
 
 //**********************************************************************
-//
-//**********************************************************************
 // Thread to handle incoming messages from one node
 // The nodeId of the node we are handling is passed in vias parg
+//**********************************************************************
 static void *nodeThread(void *parg)
 {
 
@@ -195,8 +202,6 @@ static void *nodeThread(void *parg)
     pNode = nodeGet(nodeId);
     sd = pNode->sd;
     nodeRelease(nodeId);
-
-    //printf("Node %d sd %d\n", nodeId, sd);
 
     // Do till the connection is closed
     while (m_run)
@@ -239,14 +244,14 @@ static void *nodeThread(void *parg)
         // Call message processor
         processMsg(nodeId, &msg);
 
-    }
+    } // loop
 
     return NULL;
 }
 
 
 //**********************************************************************
-//
+// Process a message
 //**********************************************************************
 static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
 {
@@ -284,8 +289,8 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             processExit(nodeId, pMsg);
             break; 
 
+        // Messages not handled directly by me
         default:
-
 
             // If msgId is legal
             if (msgId < MSGID_MAX)
@@ -332,7 +337,9 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             {
                 printf("Someone trying to send us bad message %d\n", msgId);
             }
-    }
+            break;
+
+    } // end switch
     
 }
 

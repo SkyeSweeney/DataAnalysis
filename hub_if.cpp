@@ -83,12 +83,17 @@ int HubIf::client_init(void)
     {
         printf("setsockopt fail");  
     }  
+    err = setsockopt(m_sockFd, SOL_SOCKET, SO_REUSEPORT, &flag, sizeof(flag));
+    if (err == -1)
+    {
+        printf("setsockopt fail");  
+    }  
 
 
     // Connect the client socket to server socket
     if (connect(m_sockFd, (SA*)&servaddr, sizeof(servaddr)) != 0) 
     {
-        printf("connection with the server failed...\n");
+        printf("connection with the server failed (%d)...\n", errno);
         exit(0);
     }
     else

@@ -3,6 +3,7 @@ CXXFLAGS = -g -Wall -std=c++11
 
 
 all: hub video cmd minimal img playback
+	ctags *
 
 hub: hub.o nodes.o
 	g++ ${CXXFLAGS} -o $@ -pthread -lreadline hub.o nodes.o -lreadline
@@ -56,3 +57,4 @@ clean:
 	rm -f hub
 	rm -f video
 	rm -f cmd
+	rm -f img minimal playback

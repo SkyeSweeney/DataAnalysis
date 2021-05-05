@@ -10,7 +10,6 @@
 
 #include <wx/wx.h>
 #include <wx/sizer.h>
-#include <wx/timer.h>
 
 #include "hub_if.h"
 #include "nodes.h"
@@ -28,7 +27,6 @@ class MyApp: public wxApp
 
 private:
     MyFrame      *m_myFrame;
-    MyImagePanel *m_myImagePanel;
 
 
 public:
@@ -54,8 +52,10 @@ public:
     void paintEvent(wxPaintEvent & evt);
     void paintNow();
     void render(wxDC& dc);
-    void OnTimer(wxTimerEvent & evt);
-    void start();
+    void setFrame(uint32_t sn);
+    void cbTime(Msg_t *pMsg);
+    void cbVideoConfig(Msg_t *pMsg);
+
     
     // some useful events
     /*
@@ -72,10 +72,10 @@ public:
     DECLARE_EVENT_TABLE()
 
 private:
-    wxTimer m_timer;
-    uint16_t m_sn;
-    char     m_path[128];
-    char     m_baseFn[128];
+    char        m_path[128];
+    char        m_baseFn[128];
+    VideoSync_t m_videoSync;
+
 };
 
 
@@ -90,6 +90,9 @@ public:
     // Event handlers
     void OnQuit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
+
+    MyImagePanel *getMyImagePanel(void);
+
 
 private:
     MyImagePanel *m_myImagePanel;
