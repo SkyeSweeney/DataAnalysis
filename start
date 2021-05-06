@@ -1,0 +1,5 @@
+#! /bin/bash
+
+gnome-terminal --title="HUB"      -- ./hub
+gnome-terminal --title="PLAYBACK" -- ./playback
+gnome-terminal --title="CMD"      -- ./cmd

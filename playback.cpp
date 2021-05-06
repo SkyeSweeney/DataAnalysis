@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
     pHubIf->registerCb(MSGID_PLAYBACK, cbPlayback);
 
-    pthread_create(&m_playbackThread, NULL, playbackThread, NULL);
+    //pthread_create(&m_playbackThread, NULL, playbackThread, NULL);
     
     Msg_t msg;
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     for (int i=0; ; i++)
     {
-        nanosleep(&ts, NULL);
+        usleep(33333);
         pHubIf->sendMsg(&msg, MSGID_TIME, sec, nsec);
 
         nsec += 1000*1000*1000/30;
@@ -98,6 +98,8 @@ static void *playbackThread(void *pargs)
 
     for (;;)
     {
+
+        sleep(1);
 
         // Try to take command semaphore
         err = sem_trywait(&m_cmdSem);

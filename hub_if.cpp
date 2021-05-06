@@ -253,7 +253,14 @@ static void * receiverThread(void *arg)
 
         // Read header
         got = read(sockFd, (void*)&msg.hdr, sizeof(MsgHeader_t));
-        //printf("Got header %ld\n", got);
+        if (got == -1)
+        {
+            printf("error %d %d\n", errno, sockFd);
+        }
+        else
+        {
+            printf("Got header %ld\n", got);
+        }
 
         // Check header
         if (msg.hdr.SOM != 0x534B)

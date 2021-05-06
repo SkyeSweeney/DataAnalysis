@@ -26,7 +26,7 @@ static uint16_t nToks;
 int main(int argc, char *argv[])
 {
     char *pCmdBuf;
-    char userPrompt[] = "> ";
+    char userPrompt[] = "Cmd> ";
     int  n;
 
     HubIf *pHubIf;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         }
 
         n = strlen(pCmdBuf);
-        if (n > 1)
+        if (n > 0)
         {
             // Process user command
             processUserCmd(pHubIf, pCmdBuf);
@@ -104,28 +104,16 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
     CmdSplitString(pCmdBuf);
 
     // Discard blank lines
-    if (nToks == 0) return;
+    if (nToks == 0) 
+    {
+        printf("\n");
+        return;
+    }
 
     // Get first token
     pCmd = tokens[0];
 
-    // switch on first token
-    if (strcmp(pCmd,"time") == 0)
-    {
-        if (nToks == 2)
-        {
-            uint32_t i;
-            printf("Time command\n");
-            i = atoi(tokens[1]);
-            pHubIf->sendMsg(&msg, MSGID_TIME, i, 0);
-        }
-        else
-        {
-            printf("Wrong number of tokens\n");
-        }
-    }
-
-    else if (strcmp(pCmd,"sync") == 0)
+    if (strcmp(pCmd,"sync") == 0)
     {
 
         // Send videoConfig message
@@ -172,10 +160,20 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
     {
         run = 0;
     }
+
     else if (strcmp(pCmd,"stop") == 0)
     {
         run = 0;
     }
+
+    else if (strcmp(pCmd,"?") == 0)
+    {
+        printf("sync\n");
+        printf("start\n");
+        printf("exit\n");
+        printf("stop\n");
+    }
+
     else
     {
         printf("Unknown command\n");

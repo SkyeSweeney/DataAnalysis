@@ -63,6 +63,19 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(HUB_PORT); 
 
+    int flag = 1;
+    int err;
+    err = setsockopt(hubSd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    if (err == -1)
+    {
+        printf("setsockopt fail");
+    }
+    err = setsockopt(hubSd, SOL_SOCKET, SO_REUSEPORT, &flag, sizeof(flag));
+    if (err == -1)
+    {
+        printf("setsockopt fail");
+    }
+
     // Bind to address
     bind(hubSd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
 
@@ -121,11 +134,19 @@ static void *userThread(void *parg)
     Node_t  *pNode;
     char    *pCmdBuf;
     char    *pTok;
+    char     userPrompt[] = "Hub> ";
 
     for (;;)
     {
+        (void)write(0, userPrompt, sizeof(userPrompt));
+
         // Get a user command
-        pCmdBuf = readline("Hub> ");
+        pCmdBuf = readline(NULL);
+        if ((pCmdBuf != NULL) && (pCmdBuf[0] != 0))
+        {
+            add_history(pCmdBuf);
+        }
+
 
         // Parse command
         pTok = strtok(pCmdBuf, " ");
@@ -134,7 +155,7 @@ static void *userThread(void *parg)
         if (pTok == NULL) continue;
 
         // EXIT
-        if (strcasecmp(pTok, "Exit") == 0)
+        if (strcasecmp(pTok, "exit") == 0)
         {
             break;
         }
@@ -166,6 +187,15 @@ static void *userThread(void *parg)
         else if (strcasecmp(pTok, "terse") == 0)
         {
             m_verbose = false;
+        }
+
+        // help
+        else if (strcasecmp(pTok, "?") == 0)
+        {
+            printf("terse\n");
+            printf("verbose\n");
+            printf("who\n");
+            printf("exit\n");
         }
 
         // UNKNOWN

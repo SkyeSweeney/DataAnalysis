@@ -44,10 +44,12 @@ bool MyApp::OnInit()
     pHubIf->client_init();
     pHubIf->login(NODE_VIDEO);
 
+    // Register callback for the Time message
     std::function<void(Msg_t*)> pCbTime;
     pCbTime = std::bind(&MyImagePanel::cbTime, pMyImagePanel, _1);
-    pHubIf->registerCb(MSGID_TIME,         pCbTime);
+    pHubIf->registerCb(MSGID_TIME, pCbTime);
 
+    // Register callback for the VideoConfig message
     std::function<void(Msg_t*)> pCbVideoConfig;
     pCbVideoConfig = std::bind(&MyImagePanel::cbVideoConfig, pMyImagePanel, _1);
     pHubIf->registerCb(MSGID_VIDEO_CONFIG, pCbVideoConfig);
@@ -141,6 +143,8 @@ MyFrame::MyFrame(const wxString& title)
 
 
 
+
+
 //**********************************************************************
 // getMyImagePanel
 //**********************************************************************
@@ -204,21 +208,18 @@ MyImagePanel::MyImagePanel(wxFrame     *parent,
 {
 
     // Set the file name parts
+    // TODO get from config message
     strcpy(m_path, "/home/skye/Projects/DataAnalysis/thumbs/");
     strcpy(m_baseFn, "output");
-
     m_videoSync.sec = 0;
     m_videoSync.nsec = 0;
 
-    //parent->SetWidth(320);
-    //parent->SetHeight(180);
 }
 
 
 //**********************************************************************
-// Called by the system of by wxWidgets when the panel needs
-// to be redrawn. You can also trigger this call by
-// calling Refresh()/Update().
+// Called by wxWidgets when the panel needs to be redrawn. 
+// You can also trigger this call by calling Refresh()/Update().
 //**********************************************************************
 void MyImagePanel::paintEvent(wxPaintEvent & evt)
 {
@@ -270,11 +271,13 @@ void MyImagePanel::cbTime(Msg_t *pMsg)
     bool     ok;
     uint32_t sec, nsec;
     uint32_t sn;
+    static uint32_t n=0;
 
     // Put message data into memory
     sec   =  pMsg->hdr.sec;
     nsec  =  pMsg->hdr.nsec;
     printf("Got time %u %u\n", sec, nsec);
+
 
 
     if (m_videoSync.sec == 0)
@@ -306,7 +309,13 @@ void MyImagePanel::cbTime(Msg_t *pMsg)
 
     // Force a paint
     //this->paintNow();
-    Refresh();
+
+    n++;
+    if (n > 10)
+    {
+        Refresh();
+        n = 0;
+    }
 
 }
 
