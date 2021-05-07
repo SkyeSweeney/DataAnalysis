@@ -16,6 +16,8 @@
 
 static void * receiverThread(void *arg);
 
+static bool debug = false;
+
 #define SA struct sockaddr
 
 typedef struct ReceiverThreadArgs_s
@@ -45,7 +47,7 @@ HubIf::~HubIf()
 }
 
 //**********************************************************************
-//
+// Initialize a client interface
 //**********************************************************************
 int HubIf::client_init(void)
 {
@@ -196,7 +198,7 @@ int HubIf::sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
         msg->hdr.nsec   = nsec;
 
 
-        if (0)
+        if (debug)
         {
             printf("SOM:%x msgId:%d Source:%d Length:%d\n",
                    msg->hdr.SOM,
@@ -204,20 +206,28 @@ int HubIf::sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
                    msg->hdr.source,
                    msg->hdr.length);
         }
+
+        // Attempt to send the message
         err = send(m_sockFd, 
                   (void*)msg, 
                   sizeof(MsgHeader_t) + msg->hdr.length, 
                   0);
-        if (0)
+
+        if (err == -1)
         {
-            printf("Send %ld %d %d\n", 
+            printf("Error on send %d\n", errno);
+        } 
+        else
+        {
+            printf("Sent type:%d hdrSize:%ld bodySize:%d\n", 
+                   msg->hdr.msgId,
                    sizeof(MsgHeader_t), 
-                   msg->hdr.length, err);
+                   msg->hdr.length);
         }
     }
     else
     {
-        printf("Invalid msgid in send\n");
+        printf("Invalid msgid(%d) in send\n", msgId);
         err = 1;
     }
 
@@ -253,33 +263,59 @@ static void * receiverThread(void *arg)
 
         // Read header
         got = read(sockFd, (void*)&msg.hdr, sizeof(MsgHeader_t));
+
         if (got == -1)
         {
-            printf("error %d %d\n", errno, sockFd);
+            printf("Error on header read %d %d\n", errno, sockFd);
+            break;
+        }
+        else if (got == 0)
+        {
+            printf("EOF on read of header\n");
+            break;
+        }
+        else if (got == sizeof(MsgHeader_t))
+        {
+            // Life is good
         }
         else
         {
-            printf("Got header %ld\n", got);
+            printf("Bad size on header read\n");
+            break;
         }
 
         // Check header
         if (msg.hdr.SOM != 0x534B)
         {
-            // For now just hope next read works
-            // Should really read byte by byte till we find the SOM
-            continue;
+            printf("Bad SOM in header\n");
+            break;
         }
 
         // Get the message ID and size
         msgId = msg.hdr.msgId;
         n = msg.hdr.length;
-        //printf("Body size is %d\n", n);
 
         // Read body
         got = read(sockFd, (void*)&msg.body, n);
-        if (got != n)
+
+        if (got == -1)
         {
-            printf("Got %ld and not %ld bytes\n", got, (size_t)n);
+            printf("Error on body read %d %d\n", errno, sockFd);
+            break;
+        }
+        else if (got == 0)
+        {
+            printf("EOF on read of body\n");
+            break;
+        }
+        else if (got == n)
+        {
+            // Life is good
+        }
+        else
+        {
+            printf("Bad size on body read\n");
+            break;
         }
 
         // If a valid message id

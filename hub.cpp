@@ -242,7 +242,7 @@ static void *nodeThread(void *parg)
         
         if (n == 0)
         {
-            printf("Node closed. Logging out.\n");
+            printf("Error reading header. Logging out.\n");
             close(sd);
             pNode->sd = -1;
             pNode->nodeType = NODE_NONE;
@@ -266,15 +266,21 @@ static void *nodeThread(void *parg)
         
             if (n == 0)
             {
-                printf("Node closed\n");
+                printf("Error reading body. Logging out.\n");
+                close(sd);
+                pNode->sd = -1;
+                pNode->nodeType = NODE_NONE;
+                nodeRelease(nodeId);
                 break;
             }
-        }
+        } // Have body
 
         // Call message processor
         processMsg(nodeId, &msg);
 
     } // loop
+
+    printf("Leaving loop\n");
 
     return NULL;
 }

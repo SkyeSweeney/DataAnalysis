@@ -51,17 +51,22 @@ int main(int argc, char *argv[])
         (void)write(0, userPrompt, sizeof(userPrompt));
 
         pCmdBuf = readline(NULL); // This allocated memory
-        if ((pCmdBuf != NULL) && (pCmdBuf[0] != 0))
-        {
-            add_history(pCmdBuf);
-        }
 
-        // If a blank line
-        if (pCmdBuf[0] == '\n')
+        if (pCmdBuf == NULL)
         {
-            // Free the buffer allocated by getline
+            continue;
+        } 
+        
+        // If a fully blank line
+        if (pCmdBuf[0] == 0)
+        {
+            printf("\n");
             free(pCmdBuf);
             continue;
+        } 
+        else
+        {
+             add_history(pCmdBuf);
         }
 
         // Delete newline at end of line

@@ -49,7 +49,8 @@ public:
     // Constructor
     MyImagePanel(wxFrame* parent, wxBitmapType format);
     
-    void paintEvent(wxPaintEvent & evt);
+    void OnPaint(wxPaintEvent & evt);
+    void OnCustom(wxCommandEvent & evt);
     void paintNow();
     void render(wxDC& dc);
     void setFrame(uint32_t sn);

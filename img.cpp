@@ -12,6 +12,9 @@
 using namespace std;
 using namespace std::placeholders; // for `_1`
 
+wxDEFINE_EVENT(MY_CUSTOM_COMMAND, wxCommandEvent);
+
+
 
 //**********************************************************************
 //  MyApp
@@ -195,7 +198,8 @@ BEGIN_EVENT_TABLE(MyImagePanel, wxPanel)
      */
     
     // catch paint events
-    EVT_PAINT(MyImagePanel::paintEvent)
+    EVT_PAINT(MyImagePanel::OnPaint)
+    EVT_COMMAND(wxID_ANY, MY_CUSTOM_COMMAND, MyImagePanel::OnCustom)
 
 END_EVENT_TABLE()
 
@@ -221,13 +225,24 @@ MyImagePanel::MyImagePanel(wxFrame     *parent,
 // Called by wxWidgets when the panel needs to be redrawn. 
 // You can also trigger this call by calling Refresh()/Update().
 //**********************************************************************
-void MyImagePanel::paintEvent(wxPaintEvent & evt)
+void MyImagePanel::OnPaint(wxPaintEvent & evt)
 {
     // Create a DC for this ImagePanel
     wxPaintDC dc(this);
 
     // Force the render
     render(dc);
+}
+
+//**********************************************************************
+// Called by wxWidgets when the panel needs to be redrawn. 
+// You can also trigger this call by calling Refresh()/Update().
+//**********************************************************************
+void MyImagePanel::OnCustom(wxCommandEvent & evt)
+{
+    // Create a DC for this ImagePanel
+    paintNow();
+    printf("!\n");
 }
 
 //**********************************************************************
@@ -307,13 +322,16 @@ void MyImagePanel::cbTime(Msg_t *pMsg)
     ok = m_bitMap.LoadFile(buf, wxBITMAP_TYPE_PNG);
     (void)ok;
 
-    // Force a paint
-    //this->paintNow();
-
     n++;
-    if (n > 10)
+    if (n > 5)
     {
-        Refresh();
+        // Need to post event here to get the paint back into the
+        // thread context of the main loop
+        //this->paintNow();
+        //Refresh();
+
+        wxCommandEvent evt(MY_CUSTOM_COMMAND);
+        wxPostEvent(this, evt);
         n = 0;
     }
 
