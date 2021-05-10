@@ -133,7 +133,7 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
     {
         if (nToks == 1 )
         {
-            printf("Stop command\n");
+            printf("STOP command\n");
             msg.body.playback.cmd     = PLAYBACK_STOP;
             msg.body.playback.fn[0]   = 0;
             msg.body.playback.ratio   = 1.0;
@@ -145,14 +145,41 @@ static void processUserCmd(HubIf *pHubIf, char *pCmdBuf)
         }
     }
 
-    else if (strcmp(pCmd,"start") == 0)
+    else if (strcmp(pCmd,"play") == 0)
     {
-        if (nToks == 1 )
+        if (nToks == 1)
         {
-            printf("Stop command\n");
+            printf("PLAY command\n");
             msg.body.playback.cmd     = PLAYBACK_PLAY;
-            msg.body.playback.fn[0]   = 0;
-            msg.body.playback.ratio   = 1.0;
+            pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            printf("Wrong number of tokens\n");
+        }
+    }
+
+    else if (strcmp(pCmd,"load") == 0)
+    {
+        if (nToks == 2)
+        {
+            printf("LOAD command\n");
+            msg.body.playback.cmd     = PLAYBACK_LOAD;
+            strcpy(msg.body.playback.fn, tokens[1]);
+            pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            printf("Wrong number of tokens\n");
+        }
+    }
+
+    else if (strcmp(pCmd,"rewind") == 0)
+    {
+        if (nToks == 1)
+        {
+            printf("REWIND command\n");
+            msg.body.playback.cmd     = PLAYBACK_REWIND;
             pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
         }
         else

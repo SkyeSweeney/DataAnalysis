@@ -2,8 +2,15 @@
 CXXFLAGS = -g -Wall -std=c++11
 
 
-all: hub video cmd minimal img playback
+all: hub video cmd minimal img playback mkSample mkIndex
 	ctags *
+
+
+mkSample: mkSample.cpp msgs.h
+	g++ ${CXXFLAGS} -o $@ mkSample.cpp
+
+mkIndex: mkIndex.cpp msgs.h
+	g++ ${CXXFLAGS} -o $@ mkIndex.cpp
 
 hub: hub.o nodes.o
 	g++ ${CXXFLAGS} -o $@ -pthread -lreadline hub.o nodes.o -lreadline
@@ -58,3 +65,7 @@ clean:
 	rm -f video
 	rm -f cmd
 	rm -f img minimal playback
+	rm -f mkIndex
+	rm -f mkSample
+	rm -r sample.log
+	rm -r sample.index

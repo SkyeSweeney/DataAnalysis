@@ -147,12 +147,15 @@ typedef struct BodyTime_s
 #pragma pack(0)
 
 typedef enum {
-    PLAYBACK_STOP   = 0,
-    PLAYBACK_PLAY   = 1,
-    PLAYBACK_REWIND = 2,
-    PLAYBACK_SINGLE = 3,
-    PLAYBACK_SPEED  = 4,
-    PLAYBACK_LOAD   = 5,
+    PLAYBACK_STOP   = 0,  // Stop playback in progress
+    PLAYBACK_PLAY   = 1,  // Start playing the loaded file from curr location
+    PLAYBACK_REWIND = 2,  // Rewind the loaded file
+    PLAYBACK_FWD    = 3,  // Single step the loaded file n times. dflt=1
+    PLAYBACK_REV    = 4,  // Single step the loaded file n times. dflt=1
+    PLAYBACK_SPEED  = 5,  // Set playback speed
+    PLAYBACK_LOAD   = 6,  // Load a new file
+    PLAYBACK_STAT   = 7,  // Report status (file, location, ...)
+    PLAYBACK_GOTO   = 8,  // Goto record n
 } PlaybackCmd_e;
 
 
@@ -160,7 +163,8 @@ typedef enum {
 typedef struct BodyPlayback_s
 {
     PlaybackCmd_e  cmd;      // Playback command (Enumeration)
-    double         ratio;    // Ration to realtime
+    double         ratio;    // Ratio to realtime
+    uint32_t       arg;      // Various uses
     char           fn[256];  // filename of file to playback
 } BodyPlayback_t;
 #pragma pack(0)

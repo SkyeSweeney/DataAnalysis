@@ -17,6 +17,7 @@
         OP(NODE_MAP,       0)  \
         OP(NODE_TIME,      0)  \
         OP(NODE_PLAYBACK,  0)  \
+        OP(NODE_ROBOT,     0)  \
         OP(NODE_MAX,       0)
 
 
