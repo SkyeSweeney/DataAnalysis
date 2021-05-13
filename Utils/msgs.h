@@ -88,15 +88,24 @@ typedef struct BodyRegister_s
 #pragma pack(0)
 
 
+typedef enum
+{
+    LOG_CRI,
+    LOG_ERR,
+    LOG_WRN,
+    LOG_NTC,
+    LOG_DBG,
+    LOG_CMD
+} LogType_e;
+
+
 //**********************************************************************
-// Message to 
+// Message to Log results
 //**********************************************************************
 #pragma pack(1)
 typedef struct BodyLog_s
 {
-    uint32_t sec;     // Epoch seconds of event
-    uint32_t nsec;    // nanosecond into second of event
-    uint8_t  level;   // Class of event (INFO, DEBUG, ...)
+    uint8_t  level;        // Class of event (Use LogType_e)
     char     string[1000]; // String of event
 } BodyLog_t;
 #pragma pack(0)

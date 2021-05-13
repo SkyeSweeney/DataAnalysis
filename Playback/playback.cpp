@@ -265,8 +265,18 @@ void processCmd(void)
             // If the open failes
             if (m_fin == NULL)
             {
-                printf("Unable to open file <%s>\n", m_fn);
                 m_fn[0] = 0;
+
+                Msg_t msg;
+                msg.body.log.level = LOG_ERR;
+                sprintf(msg.body.log.string, 
+                        "Unable to open file <%s>", 
+                        m_fn);
+                m_pHubIf->sendMsg(&msg, 
+                                  MSGID_LOG,
+                                  0, 
+                                  0);
+
             }
             break;
 

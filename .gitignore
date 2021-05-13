@@ -6,6 +6,7 @@ minimal
 playback
 vars.csv
 *.o
+*.d
 *.swp
 Midget/master
 Midget/master.dwarf
@@ -16,3 +17,4 @@ sample.log
 sample.index
 mkIndex
 mkSample
+grid

@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 // Name:        Data Analysis program
 // Author:      Skye Sweeney
 /////////////////////////////////////////////////////////////////////////////
@@ -20,21 +20,34 @@
     #include "wx/wx.h"
 #endif
 
+#include <functional>
+
 #include "wx/colordlg.h"
 #include "wx/fontdlg.h"
 #include "wx/numdlg.h"
 #include "wx/aboutdlg.h"
-
 #include "wx/grid.h"
 #include "wx/headerctrl.h"
 #include "wx/generic/gridctrl.h"
 #include "wx/generic/grideditors.h"
 
-#include "griddemo.h"
+#include "grid.h"
+#include "hub_if.h"
+#include "nodes.h"
+#include "msgs.h"
+
+using namespace std::placeholders; // for `_1`
+
+
+uint32_t run = 0;
 
 // ----------------------------------------------------------------------------
 // wxWin macros
 // ----------------------------------------------------------------------------
+
+
+wxDEFINE_EVENT(LOG_EVENT, wxCommandEvent);
+
 
 wxIMPLEMENT_APP(GridApp);
 
@@ -65,9 +78,14 @@ wxBEGIN_EVENT_TABLE( GridFrame, wxFrame )
     EVT_GRID_CELL_LEFT_CLICK( GridFrame::OnCellLeftClick )
     EVT_GRID_SELECT_CELL( GridFrame::OnSelectCell )
     EVT_GRID_RANGE_SELECT( GridFrame::OnRangeSelected )
+    EVT_COMMAND(wxID_ANY, LOG_EVENT, GridFrame::logEvent)
+
 wxEND_EVENT_TABLE()
 
 
+//**********************************************************************
+//
+//**********************************************************************
 GridFrame::GridFrame()
         : wxFrame( (wxFrame *)NULL, 
                    wxID_ANY, 
@@ -174,9 +192,16 @@ GridFrame::GridFrame()
     SetSizerAndFit( topSizer );
 
 
-    // Set up to talk to hub
-    // Accept messages
-    // LOG
+    // Create a new hub interface
+    m_pHubIf = new HubIf();
+    m_pHubIf->client_init();
+    m_pHubIf->login(NODE_CMD);
+
+    // Register callback for the Log message
+    std::function<void(Msg_t*)> pCbLog;
+    pCbLog = std::bind(&GridFrame::cbLog, this, _1);
+    m_pHubIf->registerCb(MSGID_LOG, pCbLog);
+
 
     // Center on screen
     Centre();
@@ -191,6 +216,31 @@ GridFrame::~GridFrame()
     delete wxLog::SetActiveTarget(m_logOld);
 }
 
+
+//**********************************************************************
+// Process log message
+//**********************************************************************
+void GridFrame::cbLog(Msg_t *pMsg)
+{
+    // This is called from a different context.
+    // Must send a message to be picked uo by main loop
+    // Must package the string and level
+    wxCommandEvent evt(LOG_EVENT);
+    wxPostEvent(this, evt);
+}
+
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::logEvent(wxCommandEvent & evt)
+{
+    // TODO Extract the level and string
+    this->addRecord("aaa", 
+                    "bbb", 
+                    LOG_DBG,
+                    "AAAAA");
+}
 
 //**********************************************************************
 // Add a record to bottom of grid
@@ -253,30 +303,237 @@ void GridFrame::addRecord(const char *sim,
 
 }
 
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::parseCmd(const char *cmd)
+{
+
+    char *pCmd;
+    Msg_t msg;
+
+    // Split line into tokens
+    this->tokenize(cmd);
+
+    // Discard blank lines
+    if (m_numToks == 0)
+    {
+        return;
+    }
+
+    // Get first token
+    pCmd = m_tokens[0];
+
+    if (strcmp(pCmd,"sync") == 0)
+    {
+        // Send videoConfig message
+        Msg_t msg;
+        msg.body.videoConfig.videoSync.sec   = 1;
+        msg.body.videoConfig.videoSync.nsec  = 0;
+        msg.body.videoConfig.videoSync.frame = 0;
+        m_pHubIf->sendMsg(&msg, MSGID_VIDEO_CONFIG, 0, 0);
+    }
+
+    else if (strcmp(pCmd,"stop") == 0)
+    {
+        if (m_numToks == 1 )
+        {
+            msg.body.playback.cmd     = PLAYBACK_STOP;
+            msg.body.playback.fn[0]   = 0;
+            msg.body.playback.ratio   = 1.0;
+            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            LogErr("Wrong number of tokens");
+        }
+    }
+    else if (strcmp(pCmd,"play") == 0)
+    {
+        if (m_numToks == 1)
+        {
+            msg.body.playback.cmd     = PLAYBACK_PLAY;
+            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            LogErr("Wrong number of tokens");
+        }
+    }
+
+      else if (strcmp(pCmd,"load") == 0)
+    {
+        if (m_numToks == 2)
+        {
+            msg.body.playback.cmd     = PLAYBACK_LOAD;
+            strcpy(msg.body.playback.fn, m_tokens[1]);
+            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            LogErr("Wrong number of tokens");
+        }
+    }
+
+   else if (strcmp(pCmd,"rewind") == 0)
+    {
+        if (m_numToks == 1)
+        {
+            msg.body.playback.cmd     = PLAYBACK_REWIND;
+            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
+        }
+        else
+        {
+            LogErr("Wrong number of tokens");
+        }
+    }
+
+    else if (strcmp(pCmd,"exit") == 0)
+    {
+        run = 0;
+    }
+    else if (strcmp(pCmd,"stop") == 0)
+    {
+        run = 0;
+    }
+
+    else if (strcmp(pCmd,"?") == 0)
+    {
+        wxMessageBox("sync\n"
+                     "start\n"
+                     "exit\n"
+                     "stop");
+    }
+
+    else
+    {
+        LogErr("Unknown command");
+    }
+
+    return;
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+uint16_t GridFrame::tokenize(const char *pCmd)
+{
+    char  copy[1024];
+    char *saveptr = NULL;
+    char *pStr;
+    char *p;
+    int  i;
+
+    strcpy(copy, pCmd);
+
+    // Determine the number of tokens in string
+    pStr = copy;
+
+    for (i=0; ;i++)
+    {
+        // Tokeninze to get pointers
+        p = strtok_r(pStr, " ", &saveptr);
+        pStr = NULL;
+
+        // If no token, skip counting
+        if (p == NULL)
+        {
+            break;
+        }
+
+        // If a comment, skip counting
+        if (strcmp(p, "//") == 0)
+        {
+            break;
+        }
+        m_tokens[i] = p;
+    }
+
+    // Save number of tokens
+    m_numToks = i;
+
+    return m_numToks;
+
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogCri(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_CRI, str);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogErr(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_ERR, str);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogWrn(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_WRN, str);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogNtc(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_NTC, str);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogDbg(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_DBG, str);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+void GridFrame::LogCmd(const char *str)
+{
+    this->addRecord("aaa", "aaa", LOG_CMD, str);
+}
+
 
 //**********************************************************************
 // Event happens when user hits Enter in command window
 //**********************************************************************
 void GridFrame::OnCmd(wxCommandEvent& event)
 {
+    wxString    cmd;
     wxTextCtrl *win;
-    wxString    v;
+    const char *pCmd;
+    int         err;
 
     // Get the window ID
     win = (wxTextCtrl *)event.GetEventObject();
 
     // Get the value
-    v = win->GetValue();
-
-    // Parse the command
+    cmd = win->GetValue();
+    pCmd = cmd.mb_str().data();
 
     // Append it to the table
-    this->addRecord("aaa", "aaa", LOG_CMD, v.mb_str().data());
+    this->LogCmd(pCmd);
 
     // Force us to see this new row
     m_grid->GoToCell(m_numRows-1, 0);
 
+    // Clear the command
     win->SetValue("");
+
+    // Parse the command
+    parseCmd(pCmd);
+
 
 }
   

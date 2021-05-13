@@ -20,7 +20,7 @@ CXXFLAGS ?= -I../Utils
 CPPFLAGS ?= 
 
 # Standard linker flags 
-LDFLAGS ?= 
+LDFLAGS ?= ../Utils/hub_if.o
 
 # Location and arguments of wx-config script 
 WX_CONFIG ?= wx-config
@@ -53,7 +53,7 @@ WX_CONFIG_FLAGS = $(WX_CONFIG_UNICODE_FLAG) $(WX_CONFIG_SHARED_FLAG) \
 GRID_CXXFLAGS = -I. `$(WX_CONFIG) --cxxflags $(WX_CONFIG_FLAGS)` $(CPPFLAGS) \
 	$(CXXFLAGS)
 GRID_OBJECTS =  \
-	grid_griddemo.o
+	grid.o
 
 ### Conditionally set variables: ###
 
@@ -90,7 +90,7 @@ test_for_selected_wxbuild:
 grid: $(GRID_OBJECTS)
 	$(CXX) -o $@ $(GRID_OBJECTS)   $(LDFLAGS)  `$(WX_CONFIG) $(WX_CONFIG_FLAGS) --libs core,base`
 
-grid_griddemo.o: ./griddemo.cpp
+grid.o: ./grid.cpp
 	$(CXX) -c -o $@ $(GRID_CXXFLAGS) $(CPPDEPS) $<
 
 .PHONY: all install uninstall clean
