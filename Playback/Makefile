@@ -13,3 +13,6 @@ playback.o: playback.cpp ../Utils/msgs.h ../Utils/nodes.h
 clean:
 	rm -f *.o
 	rm -f playback
+
+install:
+	cp playback ../bin/.

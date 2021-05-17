@@ -31,7 +31,7 @@
 #include "wx/generic/gridctrl.h"
 #include "wx/generic/grideditors.h"
 
-#include "grid.h"
+#include "tbl.h"
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
@@ -40,13 +40,14 @@ using namespace std::placeholders; // for `_1`
 
 
 uint32_t run = 0;
+VarTableEntry_t varTable[20];
 
 // ----------------------------------------------------------------------------
 // wxWin macros
 // ----------------------------------------------------------------------------
 
 
-wxDEFINE_EVENT(LOG_EVENT, wxCommandEvent);
+wxDEFINE_EVENT(MSG_EVENT, wxCommandEvent);
 
 
 wxIMPLEMENT_APP(GridApp);
@@ -74,11 +75,10 @@ bool GridApp::OnInit()
 wxBEGIN_EVENT_TABLE( GridFrame, wxFrame )
     EVT_MENU      ( wxID_ABOUT, GridFrame::About )
     EVT_MENU      ( wxID_EXIT,  GridFrame::OnQuit )
-    EVT_TEXT_ENTER( wxID_ANY,   GridFrame::OnCmd  )
     EVT_GRID_CELL_LEFT_CLICK( GridFrame::OnCellLeftClick )
     EVT_GRID_SELECT_CELL( GridFrame::OnSelectCell )
     EVT_GRID_RANGE_SELECT( GridFrame::OnRangeSelected )
-    EVT_COMMAND(wxID_ANY, LOG_EVENT, GridFrame::logEvent)
+    EVT_COMMAND(wxID_ANY, MSG_EVENT, GridFrame::msgEvent)
 
 wxEND_EVENT_TABLE()
 
@@ -89,13 +89,13 @@ wxEND_EVENT_TABLE()
 GridFrame::GridFrame()
         : wxFrame( (wxFrame *)NULL, 
                    wxID_ANY, 
-                   "Data Analysis",
+                   "Table View",
                    wxDefaultPosition,
                    wxDefaultSize )
 {
 
-    // Define length of table
-    m_numRows = 100;
+    m_maxRows = 100;
+    m_numRows = 1;
 
     //SetIcon(wxICON(sample));
 
@@ -134,14 +134,6 @@ GridFrame::GridFrame()
     m_logOld = wxLog::SetActiveTarget( m_logger );
     wxLog::DisableTimestamp();
 
-    // Command prompt window
-    m_cmdWin = new wxTextCtrl( this,
-                             wxID_ANY,
-                             wxEmptyString,
-                             wxDefaultPosition,
-                             wxSize(-1, 2*GetCharHeight()),
-                             wxTE_PROCESS_ENTER );
-
     // Create the status bar
     CreateStatusBar(3);
     SetStatusText("aaaa", 0);
@@ -152,7 +144,7 @@ GridFrame::GridFrame()
 
     // this will create a grid and, by default, an associated grid
     // table for strings
-    m_grid->CreateGrid( m_numRows, 4 );
+    m_grid->CreateGrid( m_numRows, 20 );
 
     // No row labels
     m_grid->SetRowLabelSize( 0 );
@@ -162,23 +154,9 @@ GridFrame::GridFrame()
 
     // Set column titles
     m_grid->SetColLabelValue(0, wxString("Sim Time"));
-    m_grid->SetColLabelValue(1, wxString("Wall Time"));
-    m_grid->SetColLabelValue(2, wxString("Class"));
-    m_grid->SetColLabelValue(3, wxString("String"));
 
-    m_grid->SetColSize(3, 500);
-
-    // Fill table for debug purposes
-    char buf[30];
-    for (int i=0; i<m_numRows; i++)
-    {
-        sprintf(buf, "%04d", 100-i-1);
-        this->addRecord(buf, buf, LOG_DBG, "Debug");
-    }
-
-    this->addRecord("S1", "W1", LOG_ERR, "error");
-    this->addRecord("S2", "W2", LOG_CMD, "command");
-
+    // Initial record (since table can't be zero rows long)
+    m_grid->SetCellValue( 0, 0, "" );
 
     // Create the layout
     wxBoxSizer *topSizer = new wxBoxSizer( wxVERTICAL );
@@ -187,7 +165,6 @@ GridFrame::GridFrame()
                    wxEXPAND );
 
     topSizer->Add( m_logWin, 0, wxEXPAND );
-    topSizer->Add( m_cmdWin, 0, wxEXPAND );
 
     SetSizerAndFit( topSizer );
 
@@ -197,11 +174,11 @@ GridFrame::GridFrame()
     m_pHubIf->client_init();
     m_pHubIf->login(NODE_CMD);
 
-    // Register callback for the Log message
-    std::function<void(Msg_t*)> pCbLog;
-    pCbLog = std::bind(&GridFrame::cbLog, this, _1);
-    m_pHubIf->registerCb(MSGID_LOG, pCbLog);
-
+    // Register callback for various messages
+    std::function<void(Msg_t*)> pCbMsg;
+    pCbMsg = std::bind(&GridFrame::cbMsg, this, _1);
+    m_pHubIf->registerCb(MSGID_LOCATION, pCbMsg);
+    m_pHubIf->registerCb(MSGID_TABLE,    pCbMsg);
 
     // Center on screen
     Centre();
@@ -220,12 +197,19 @@ GridFrame::~GridFrame()
 //**********************************************************************
 // Process log message
 //**********************************************************************
-void GridFrame::cbLog(Msg_t *pMsg)
+void GridFrame::cbMsg(Msg_t *pMsg)
 {
     // This is called from a different context.
     // Must send a message to be picked uo by main loop
     // Must package the string and level
-    wxCommandEvent evt(LOG_EVENT);
+    wxCommandEvent evt(MSG_EVENT);
+
+    // Attach message as clientData to event
+    Msg_t *msg;
+    msg = new Msg_t;
+    *msg = *pMsg;
+    evt.SetClientData(msg);
+
     wxPostEvent(this, evt);
 }
 
@@ -233,310 +217,189 @@ void GridFrame::cbLog(Msg_t *pMsg)
 //**********************************************************************
 //
 //**********************************************************************
-void GridFrame::logEvent(wxCommandEvent & evt)
+void GridFrame::msgEvent(wxCommandEvent & evt)
 {
-    // TODO Extract the level and string
-    this->addRecord("aaa", 
-                    "bbb", 
-                    LOG_DBG,
-                    "AAAAA");
+    Msg_t *pMsg;
+
+    // Get the message from the client data
+    pMsg = (Msg_t *)evt.GetClientData();
+
+    // Process appropriately
+    switch (pMsg->hdr.msgId)
+    {
+        case MSGID_LOCATION:
+            processMessage(pMsg);
+            break;
+        case MSGID_TABLE:
+            processTable(pMsg);
+            break;
+        default:
+            break;
+    }    
+
+    // Delete the message
+    delete pMsg;
 }
 
-//**********************************************************************
-// Add a record to bottom of grid
-//**********************************************************************
-void GridFrame::addRecord(const char *sim, 
-                          const char *wall, 
-                          LogType_e logType, 
-                          const char *str)
-{
-    int ir = 100 - 1;
-    wxColour clr;
 
-    // Delete top row
-    m_grid->DeleteRows(0, 1);
+//**********************************************************************
+// Process a message
+//**********************************************************************
+void GridFrame::processMessage(Msg_t *pMsg)
+{
+    char     buf[64];
+    int      ir;
+    wxColour clr;
+    MsgId_t  msgId;
+
+    msgId = pMsg->hdr.msgId;
+
+    char *p = (char *)&(pMsg->body);
+
+
+    m_numRows++; // Number of rows in grid
+
+    // If the grid is full
+    if (m_numRows >= m_maxRows)
+    {
+        // Delete top row
+        m_grid->DeleteRows(0, 1);
+
+        m_numRows = m_maxRows;
+    }
 
     // Insert row at bottom
     m_grid->AppendRows(1);
 
-    m_grid->SetCellValue( ir, 0, sim );
-    m_grid->SetCellValue( ir, 1, wall );
-    m_grid->SetCellValue( ir, 3, str );
+    // Get the row ID
+    ir = m_numRows-1;
 
-    switch(logType)
+    // For each active item in the table
+    for (int iCol=0; iCol<20; iCol++)
     {
-    case LOG_CRI:
-        m_grid->SetCellValue( ir, 2, "CRI" );
-        clr = *wxRED;
-        break;
-    case LOG_ERR:
-        m_grid->SetCellValue( ir, 2, "ERR" );
-        clr = *wxRED;
-        break;
-    case LOG_WRN:
-        m_grid->SetCellValue( ir, 2, "WRN" );
-        clr = *wxYELLOW;
-        break;
-    case LOG_NTC:
-        m_grid->SetCellValue( ir, 2, "NTC" );
-        clr = *wxBLUE;
-        break;
-    case LOG_DBG:
-        m_grid->SetCellValue( ir, 2, "DBG" );
-        clr = *wxBLACK;
-        break;
-    case LOG_CMD:
-        m_grid->SetCellValue( ir, 2, "CMD" );
-        clr = *wxGREEN;
-        break;
-    default:
-        m_grid->SetCellValue( ir, 2, "???" );
-        clr = *wxCYAN;
-        m_grid->SetCellBackgroundColour(ir, 2, *wxLIGHT_GREY);
-        break;
-    }
+        // Skip if not active
+        if (varTable[iCol].name[0] == 0) continue;
 
-    m_grid->SetCellTextColour(ir, 0, clr);
-    m_grid->SetCellTextColour(ir, 1, clr);
-    m_grid->SetCellTextColour(ir, 2, clr);
-    m_grid->SetCellTextColour(ir, 3, clr);
+        // Skip if not the right message
+        if (msgId != varTable[iCol].msgId) continue;
+
+
+        // Switch based on type
+        switch (varTable[iCol].varType)
+        {
+            case VARTYPE_DOUBLE:
+                {
+                    double var = *(double *)&p[varTable[iCol].varByteOffset];
+                    sprintf(buf, varTable[iCol].format, var);
+                }
+                break;
+
+            case VARTYPE_FLOAT:
+                {
+                    float var = *(double *)&p[varTable[iCol].varByteOffset];
+                    sprintf(buf, varTable[iCol].format, var);
+                }
+                break;
+
+            case VARTYPE_INT8:
+                {
+                    int8_t var= *(uint8_t *)&p[varTable[iCol].varByteOffset];
+                    sprintf(buf, varTable[iCol].format, var);
+                }
+                break;
+
+            case VARTYPE_UINT8:
+                {
+                    uint8_t var= *(int8_t *)&p[varTable[iCol].varByteOffset];
+                    sprintf(buf, varTable[iCol].format, var);
+                }
+                break;
+
+            case VARTYPE_INT16:
+            case VARTYPE_UINT16:
+            case VARTYPE_INT32:
+            case VARTYPE_UINT32:
+            case VARTYPE_INT64:
+            case VARTYPE_UINT64:
+            case VARTYPE_STRING:
+                break;
+            default:
+                sprintf(buf, "???");
+                break;
+
+        }
+
+        m_grid->SetCellValue(ir, iCol, buf);
+
+    } // for each column entry
+
 
 }
+
 
 //**********************************************************************
 //
 //**********************************************************************
-void GridFrame::parseCmd(const char *cmd)
+void GridFrame::processTable(Msg_t *pMsg)
 {
+    BodyTable_t *pBody;
+    uint16_t col;
 
-    char *pCmd;
-    Msg_t msg;
+    pBody = &pMsg->body.table;
+    col = pBody->entry.col;
+    printf("AAA\n");
 
-    // Split line into tokens
-    this->tokenize(cmd);
-
-    // Discard blank lines
-    if (m_numToks == 0)
+    // switch based on command type
+    switch (pBody->cmd)
     {
-        return;
-    }
+        case TABLE_CLEAR:
+            for (int i=0; i<20; i++)
+            {
+                varTable[i].name[0] = 0;
 
-    // Get first token
-    pCmd = m_tokens[0];
+                // Remove the column heading
+                m_grid->SetColLabelValue(i, "");
+            }
 
-    if (strcmp(pCmd,"sync") == 0)
-    {
-        // Send videoConfig message
-        Msg_t msg;
-        msg.body.videoConfig.videoSync.sec   = 1;
-        msg.body.videoConfig.videoSync.nsec  = 0;
-        msg.body.videoConfig.videoSync.frame = 0;
-        m_pHubIf->sendMsg(&msg, MSGID_VIDEO_CONFIG, 0, 0);
-    }
+            // Delete the data from all colums
+            // TODO
 
-    else if (strcmp(pCmd,"stop") == 0)
-    {
-        if (m_numToks == 1 )
-        {
-            msg.body.playback.cmd     = PLAYBACK_STOP;
-            msg.body.playback.fn[0]   = 0;
-            msg.body.playback.ratio   = 1.0;
-            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
-        }
-        else
-        {
-            LogErr("Wrong number of tokens");
-        }
-    }
-    else if (strcmp(pCmd,"play") == 0)
-    {
-        if (m_numToks == 1)
-        {
-            msg.body.playback.cmd     = PLAYBACK_PLAY;
-            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
-        }
-        else
-        {
-            LogErr("Wrong number of tokens");
-        }
-    }
+            // Reset back to row one
+            // TODO
 
-      else if (strcmp(pCmd,"load") == 0)
-    {
-        if (m_numToks == 2)
-        {
-            msg.body.playback.cmd     = PLAYBACK_LOAD;
-            strcpy(msg.body.playback.fn, m_tokens[1]);
-            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
-        }
-        else
-        {
-            LogErr("Wrong number of tokens");
-        }
-    }
-
-   else if (strcmp(pCmd,"rewind") == 0)
-    {
-        if (m_numToks == 1)
-        {
-            msg.body.playback.cmd     = PLAYBACK_REWIND;
-            m_pHubIf->sendMsg(&msg, MSGID_PLAYBACK, 0, 0);
-        }
-        else
-        {
-            LogErr("Wrong number of tokens");
-        }
-    }
-
-    else if (strcmp(pCmd,"exit") == 0)
-    {
-        run = 0;
-    }
-    else if (strcmp(pCmd,"stop") == 0)
-    {
-        run = 0;
-    }
-
-    else if (strcmp(pCmd,"?") == 0)
-    {
-        wxMessageBox("sync\n"
-                     "start\n"
-                     "exit\n"
-                     "stop");
-    }
-
-    else
-    {
-        LogErr("Unknown command");
-    }
-
-    return;
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-uint16_t GridFrame::tokenize(const char *pCmd)
-{
-    char  copy[1024];
-    char *saveptr = NULL;
-    char *pStr;
-    char *p;
-    int  i;
-
-    strcpy(copy, pCmd);
-
-    // Determine the number of tokens in string
-    pStr = copy;
-
-    for (i=0; ;i++)
-    {
-        // Tokeninze to get pointers
-        p = strtok_r(pStr, " ", &saveptr);
-        pStr = NULL;
-
-        // If no token, skip counting
-        if (p == NULL)
-        {
             break;
-        }
 
-        // If a comment, skip counting
-        if (strcmp(p, "//") == 0)
-        {
+        case TABLE_DELETE:
+
+            varTable[col].name[0] = 0;
+            m_grid->SetColLabelValue(col, "");
+
+            // Delete the data from the column
+            // TODO
+
             break;
-        }
-        m_tokens[i] = p;
+
+        case TABLE_ASSIGN:
+            printf("Assign %d %s\n", col, varTable[col].name);
+
+            // Check for a legal column
+            if ((col > 1) && (col < 20))
+            {
+                if (varTable[col].name[0] != 0)
+                {
+                    // Delete the column
+                }
+                varTable[col] = pBody->entry;
+                m_grid->SetColLabelValue(col, varTable[col].name);
+            }
+            break;
+
+        default:
+            break;
     }
 
-    // Save number of tokens
-    m_numToks = i;
-
-    return m_numToks;
-
 }
 
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogCri(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_CRI, str);
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogErr(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_ERR, str);
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogWrn(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_WRN, str);
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogNtc(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_NTC, str);
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogDbg(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_DBG, str);
-}
-
-//**********************************************************************
-//
-//**********************************************************************
-void GridFrame::LogCmd(const char *str)
-{
-    this->addRecord("aaa", "aaa", LOG_CMD, str);
-}
-
-
-//**********************************************************************
-// Event happens when user hits Enter in command window
-//**********************************************************************
-void GridFrame::OnCmd(wxCommandEvent& event)
-{
-    wxString    cmd;
-    wxTextCtrl *win;
-    const char *pCmd;
-    int         err;
-
-    // Get the window ID
-    win = (wxTextCtrl *)event.GetEventObject();
-
-    // Get the value
-    cmd = win->GetValue();
-    pCmd = cmd.mb_str().data();
-
-    // Append it to the table
-    this->LogCmd(pCmd);
-
-    // Force us to see this new row
-    m_grid->GoToCell(m_numRows-1, 0);
-
-    // Clear the command
-    win->SetValue("");
-
-    // Parse the command
-    parseCmd(pCmd);
-
-
-}
-  
 
 //**********************************************************************
 //

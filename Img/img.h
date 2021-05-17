@@ -50,7 +50,7 @@ public:
     MyImagePanel(wxFrame* parent, wxBitmapType format);
     
     void OnPaint(wxPaintEvent & evt);
-    void OnCustom(wxCommandEvent & evt);
+    void OnTime(wxCommandEvent & evt);
     void paintNow();
     void render(wxDC& dc);
     void setFrame(uint32_t sn);
@@ -71,6 +71,9 @@ public:
      */
     
     DECLARE_EVENT_TABLE()
+
+
+    MyFrame    *m_parent;
 
 private:
     char        m_path[128];
@@ -94,10 +97,10 @@ public:
 
     MyImagePanel *getMyImagePanel(void);
 
+    wxTextCtrl   *m_timeTxt;
 
 private:
     MyImagePanel *m_myImagePanel;
-    wxTextCtrl   *m_timeTxt;
     wxMenu       *m_fileMenu;
     wxMenu       *m_helpMenu;
     wxMenuBar    *m_menuBar;

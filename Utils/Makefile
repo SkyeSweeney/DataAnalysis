@@ -24,3 +24,9 @@ clean:
 	rm -f mkSample
 	rm -r sample.log
 	rm -r sample.index
+
+install:
+	cp mkSample ../bin/.
+	cp mkIndex ../bin/.
+	cp start ../bin/.
+	cp terms ../bin/.

@@ -33,6 +33,7 @@ private:
     wxTextCtrl     *m_logWin;
     wxLogTextCtrl  *m_logger;
     wxTextCtrl     *m_cmdWin;
+    uint32_t        m_maxRows;
     uint32_t        m_numRows;
     HubIf          *m_pHubIf;
     uint16_t        m_numToks;

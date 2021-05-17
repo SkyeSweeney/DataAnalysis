@@ -6,30 +6,69 @@
 
 #include "msgs.h"
 
+// Drive in a circle of radius 14 meters at 4m/s
+// at center 19T 296840E 4733202E
+
 
 int main(int argc, char *argv[])
 {
 
     Msg_t          msgLoc;
-    uint32_t       i;
     FILE          *fout;
 
-    double         northing    = 0.0;
-    double         easting     = 0.0;
+    double         northing;
+    double         easting;
     double         altitude    = 0.0;
-    double         speed       = 0.0;
-    double         heading     = 0.0;
+    double         speed;
+    double         heading;
 
     uint32_t       sec = 0;
     uint32_t       nsec = 0;
+
+    double         r = 14.0;
+    double         vel = 4.0;
+    double         centerE = 296840.0;
+    double         centerN = 4733202.0;
+    double         a = 0.0;
+    double         dt = 1/30.0;
+    double         omega = vel/r;
 
 
     fout = fopen("sample.log", "wb");
 
 
-    for (i=0; i<10000; i++)
+    for (;;)
     {
         
+        // Radial angle
+        a += omega * dt;
+
+        // Position
+        easting = centerE + r * cos(a);
+        northing = centerN + r * sin(a);
+
+        altitude = 0.0;
+
+        // velocity
+        speed = vel;
+
+        // Heading
+        heading = 2*M_PI - a;
+        if (heading > 2.0*M_PI) 
+        {
+            heading -= 2.0*M_PI;
+        } else if (heading < 0.0) 
+        {
+            heading += 2.0*M_PI;
+        }
+
+        // Time
+        nsec += dt * 1000000000.0; // convert to nsec
+        if (nsec > 1000000000)
+        {
+            nsec -= 1000000000;
+            sec += 1;
+        }
 
         msgLoc.hdr.SOM        = MSG_SOM;
         msgLoc.hdr.msgId      = MSGID_LOCATION;
@@ -45,26 +84,8 @@ int main(int argc, char *argv[])
 
         fwrite(&msgLoc, sizeof(BodyLocation_t) + sizeof(MsgHeader_t), 1, fout);
 
-        northing += (double)rand()/(double)(RAND_MAX) * 2.0 - 2.0/2.0;
-        easting  += (double)rand()/(double)(RAND_MAX) * 2.0 - 2.0/2.0;
-        altitude += (double)rand()/(double)(RAND_MAX) * 0.1 - 0.10/2.0;
-        speed    += (double)rand()/(double)(RAND_MAX) * 1.0 - 1.00/2.0;
-        heading  += (double)rand()/(double)(RAND_MAX) * 0.1 - 0.10/2.0;
+        if (sec > 5*60) break;
 
-        if (heading > 2.0*M_PI) 
-        {
-            heading -= 2.0*M_PI;
-        }
-        if (heading < 0.0) heading += 2.0*M_PI;
-
-        nsec += 33333333;
-        if (nsec > 1000000000)
-        {
-            nsec -= 1000000000;
-            sec += 1;
-        }
-
-        printf("."); fflush(stdout);
     }
 }
 

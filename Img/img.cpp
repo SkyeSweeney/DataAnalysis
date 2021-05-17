@@ -12,7 +12,7 @@
 using namespace std;
 using namespace std::placeholders; // for `_1`
 
-wxDEFINE_EVENT(MY_CUSTOM_COMMAND, wxCommandEvent);
+wxDEFINE_EVENT(TIME_EVENT, wxCommandEvent);
 
 
 
@@ -115,7 +115,7 @@ MyFrame::MyFrame(const wxString& title)
 
     // Create a status bar just for fun
     CreateStatusBar(2);
-    SetStatusText(wxT("Welcome to wxWidgets!"));
+    SetStatusText(wxT("NO SYNC"), 0);
 
     // Create an image panel
     m_myImagePanel = new MyImagePanel(this, wxBITMAP_TYPE_PNG);
@@ -124,10 +124,12 @@ MyFrame::MyFrame(const wxString& title)
     // Text for time
     m_timeTxt = new wxTextCtrl(this, 
                                wxID_ANY, 
-                               "10:23:33.123456. aaaaaaaaaaaaaaaa",
+                               "XX:XX:XX.XXXXXX",
                                wxDefaultPosition, 
                                wxDefaultSize,
                                wxTE_PROCESS_ENTER);
+    m_timeTxt->SetEditable(false);
+    //m_timeTxt->SetBackgroundColour(wxLIGHT_GREY);
 
     // Create a vertical sizer
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -199,7 +201,7 @@ BEGIN_EVENT_TABLE(MyImagePanel, wxPanel)
     
     // catch paint events
     EVT_PAINT(MyImagePanel::OnPaint)
-    EVT_COMMAND(wxID_ANY, MY_CUSTOM_COMMAND, MyImagePanel::OnCustom)
+    EVT_COMMAND(wxID_ANY, TIME_EVENT, MyImagePanel::OnTime)
 
 END_EVENT_TABLE()
 
@@ -211,11 +213,13 @@ MyImagePanel::MyImagePanel(wxFrame     *parent,
     wxPanel(parent)
 {
 
+    m_parent = (MyFrame*)parent;
+
     // Set the file name parts
     // TODO get from config message
-    strcpy(m_path, "/home/skye/Projects/DataAnalysis/thumbs/");
+    strcpy(m_path, "/home/skye/Projects/DataAnalysis/Data/thumbs/");
     strcpy(m_baseFn, "output");
-    m_videoSync.sec = 0;
+    m_videoSync.sec = 0xffffffff;
     m_videoSync.nsec = 0;
 
 }
@@ -238,11 +242,75 @@ void MyImagePanel::OnPaint(wxPaintEvent & evt)
 // Called by wxWidgets when the panel needs to be redrawn. 
 // You can also trigger this call by calling Refresh()/Update().
 //**********************************************************************
-void MyImagePanel::OnCustom(wxCommandEvent & evt)
+void MyImagePanel::OnTime(wxCommandEvent & evt)
 {
-    // Create a DC for this ImagePanel
-    paintNow();
-    printf("!\n");
+    Msg_t   *pMsg;
+    char     buf[300];
+    bool     ok;
+    uint32_t sec, nsec;
+    uint32_t h,m;
+    double   fsec;
+    uint32_t sn;
+    static uint32_t n=0;
+
+    // Get the message
+    pMsg = (Msg_t *)evt.GetClientData();
+
+    // Put message data into memory
+    sec   =  pMsg->hdr.sec;
+    nsec  =  pMsg->hdr.nsec;
+    printf("Got time %u %u\n", sec, nsec);
+
+
+    if (m_videoSync.sec == 0xffffffff)
+    {
+        printf("VideoConfig not received yet\n");
+        sn = 1;
+    }
+    else
+    {
+        int32_t dt;
+        // Difference in time in usec
+        // TODO Fix up for signed values
+        dt = (sec - m_videoSync.sec)*1000 +
+             (nsec - m_videoSync.nsec)/1000000;
+        sn = dt / (1.0/30.0 * 1000);
+    }
+
+    // Create the filename
+    sprintf(buf, 
+            "%s/%s_%06d.png",
+            m_path,
+            m_baseFn,
+            sn);
+    printf("Try to load file <%s>\n", buf);
+
+    // Load the file into the image
+    ok = m_bitMap.LoadFile(buf, wxBITMAP_TYPE_PNG);
+
+    if (ok)
+    {
+
+        n++;
+        if (n > 5)
+        {
+            // Convert sim time into string
+            h = sec/(60*60);
+            sec = sec - h*(60*60);
+            m = sec/60;
+            sec = sec - m*60;
+            fsec = (double)nsec/1000000000.0;
+
+            // Update time
+            char buf[40];
+            sprintf(buf, "Sim: %02u:%02u:%02u.%0.6f  frame: %d", h, m, sec, fsec, sn);
+            m_parent->m_timeTxt->ChangeValue(buf);
+
+            // Create a DC for this ImagePanel
+            paintNow();
+            n = 0;
+        }
+    }
 }
 
 //**********************************************************************
@@ -256,7 +324,6 @@ void MyImagePanel::OnCustom(wxCommandEvent & evt)
 void MyImagePanel::paintNow()
 {
     // Create a DC for this ImagePanel
-    printf("paintNow\n");
     wxClientDC dc(this);
 
     // Force the render
@@ -278,75 +345,37 @@ void MyImagePanel::render(wxDC&  dc)
 }
 
 //**********************************************************************
-// Process a time message
+// Callback for a TIME message
 //**********************************************************************
 void MyImagePanel::cbTime(Msg_t *pMsg)
 {
-    char     buf[300];
-    bool     ok;
-    uint32_t sec, nsec;
-    uint32_t sn;
-    static uint32_t n=0;
+    wxCommandEvent evt(TIME_EVENT);
+    Msg_t *msg;
 
-    // Put message data into memory
-    sec   =  pMsg->hdr.sec;
-    nsec  =  pMsg->hdr.nsec;
-    printf("Got time %u %u\n", sec, nsec);
+    // Send the message via event to the main loop.
+    // Can't process it here because of the different thread context
+    msg = new Msg_t;
+    *msg = *pMsg;
+    evt.SetClientData(msg);
 
-
-
-    if (m_videoSync.sec == 0)
-    {
-        printf("VideoConfig not received yet\n");
-        sn = 1;
-    }
-    else
-    {
-        int32_t dt;
-        // Difference in time in usec
-        // TODO Fix up for signed values
-        dt = (sec - m_videoSync.sec)*1000 +
-             (nsec - m_videoSync.nsec)/1000000;
-        sn = dt / (1.0/30.0 * 1000);
-    }
-
-    // Create the filename
-    sprintf(buf, 
-            "%s/%s_%06d.png",
-            m_path,
-            m_baseFn,
-            sn);
-    printf("SetFrame %s\n", buf);
-
-    // Load the file into the image
-    ok = m_bitMap.LoadFile(buf, wxBITMAP_TYPE_PNG);
-    (void)ok;
-
-    n++;
-    if (n > 5)
-    {
-        // Need to post event here to get the paint back into the
-        // thread context of the main loop
-        //this->paintNow();
-        //Refresh();
-
-        wxCommandEvent evt(MY_CUSTOM_COMMAND);
-        wxPostEvent(this, evt);
-        n = 0;
-    }
-
+    wxPostEvent(this, evt);
 }
 
 
 //**********************************************************************
-//
+// Callback for VIDEO CONFIG message
 //**********************************************************************
 void MyImagePanel::cbVideoConfig(Msg_t *pMsg)
 {
     // Put message data into memory
     m_videoSync = pMsg->body.videoConfig.videoSync;
 
-    printf("Got a VideoConfig\n");
+    printf("Got a VideoConfig %u %u %u\n", 
+            m_videoSync.sec, 
+            m_videoSync.nsec, 
+            m_videoSync.frame);
+
+    m_parent->SetStatusText(wxT("SYNC"), 0);
 
 }
 

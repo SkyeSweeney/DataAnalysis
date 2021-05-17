@@ -1,20 +1,30 @@
-hub
-cmd
-video
-img
-minimal
-playback
+#
+#
+#
+
+# Directories
+Data
+bin
+AAA
+
+# Binaries
+Cmd/cmd
+Hub/hub
+Img/img
+Playback/playback
+Utils/mkSample
+Utils/mkIndex
+
 vars.csv
+
+# Basic extension
 *.o
 *.d
 *.swp
+
+# ctags file
+tags
+
 Midget/master
 Midget/master.dwarf
 Midget/vars.csv
-tags
-AAA
-sample.log
-sample.index
-mkIndex
-mkSample
-grid

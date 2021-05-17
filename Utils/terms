@@ -1,0 +1,6 @@
+#! /bin/bash
+
+gnome-terminal --title="HUB"
+gnome-terminal --title="PLAYBACK"
+gnome-terminal --title="CMD"
+gnome-terminal --title="IMG"

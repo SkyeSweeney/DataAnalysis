@@ -47,42 +47,18 @@ int main(int argc, char *argv[])
     pthread_create(&m_playbackThread, NULL, playbackThread, NULL);
     
 
+    // TODO: Wait here for threads to die
     for (;;)
     {
         sleep(1);
     }
-    
-#if 0
-    Msg_t msg;
-
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 1000*1000*1000/30;
-
-    uint32_t sec = 0;
-    uint32_t nsec = 0;
-
-    for (int i=0; ; i++)
-    {
-        usleep(33333);
-        m_pHubIf->sendMsg(&msg, MSGID_TIME, sec, nsec);
-
-        nsec += 1000*1000*1000/30;
-        if (nsec > 1000000000)
-        {
-            nsec -= 1000000000;
-            sec += 1;
-        }
-    }
-#endif
 
 }
 
 
 //**********************************************************************
-//
-//**********************************************************************
 // Callback for a playback command message
+//**********************************************************************
 void cbPlayback(Msg_t *pMsg)
 {
 
@@ -97,14 +73,16 @@ void cbPlayback(Msg_t *pMsg)
 
 
 //**********************************************************************
-//
-//**********************************************************************
 // Thread to playback file
+//**********************************************************************
 static void *playbackThread(void *pargs)
 {
     int err;
     Msg_t msg;
+    Msg_t timeMsg;
     size_t n;
+    uint32_t sec;
+    uint32_t nsec;
 
     // Do forever
     for (;;)
@@ -157,6 +135,8 @@ static void *playbackThread(void *pargs)
 
                 } // Have body
 
+                // For now just delay. In future wait for the
+                // tight time to roll around
                 usleep(33333);
 
                 // Now we send this mesage to hub
@@ -165,9 +145,16 @@ static void *playbackThread(void *pargs)
                                   msg.hdr.sec, 
                                   msg.hdr.nsec);
 
+                // If the simulation time has changed, send out a time msg
+                sec  = msg.hdr.sec;
+                nsec = msg.hdr.nsec;
+                m_pHubIf->sendMsg(&timeMsg, MSGID_TIME, sec, nsec);
+            
+
+                // No errors, so break
                 break;
 
-            }
+            } // error handling loop
 
             // Check for a new command
             err = sem_trywait(&m_cmdSem);
@@ -198,7 +185,7 @@ static void *playbackThread(void *pargs)
 
 
 //**********************************************************************
-//
+// Process a user command
 //**********************************************************************
 void processCmd(void)
 {
@@ -265,7 +252,6 @@ void processCmd(void)
             // If the open failes
             if (m_fin == NULL)
             {
-                m_fn[0] = 0;
 
                 Msg_t msg;
                 msg.body.log.level = LOG_ERR;
@@ -276,6 +262,7 @@ void processCmd(void)
                                   MSGID_LOG,
                                   0, 
                                   0);
+                m_fn[0] = 0;
 
             }
             break;

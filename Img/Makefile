@@ -16,3 +16,6 @@ img.o: img.cpp
 clean:
 	rm -f *.o
 	rm -f img
+
+install:
+	cp img ../bin/.

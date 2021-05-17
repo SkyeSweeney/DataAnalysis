@@ -53,7 +53,7 @@ WX_CONFIG_FLAGS = $(WX_CONFIG_UNICODE_FLAG) $(WX_CONFIG_SHARED_FLAG) \
 GRID_CXXFLAGS = -I. `$(WX_CONFIG) --cxxflags $(WX_CONFIG_FLAGS)` $(CPPFLAGS) \
 	$(CXXFLAGS)
 GRID_OBJECTS =  \
-	grid.o
+	tbl.o
 
 ### Conditionally set variables: ###
 
@@ -73,24 +73,25 @@ endif
 
 ### Targets: ###
 
-all: test_for_selected_wxbuild grid
+all: test_for_selected_wxbuild tbl
 
 install: 
+	cp tbl ../bin/.
 
 uninstall: 
 
 clean: 
 	rm -f ./*.o
 	rm -f ./*.d
-	rm -f grid
+	rm -f tbl
 
 test_for_selected_wxbuild: 
 	@$(WX_CONFIG) $(WX_CONFIG_FLAGS)
 
-grid: $(GRID_OBJECTS)
+tbl: $(GRID_OBJECTS)
 	$(CXX) -o $@ $(GRID_OBJECTS)   $(LDFLAGS)  `$(WX_CONFIG) $(WX_CONFIG_FLAGS) --libs core,base`
 
-grid.o: ./grid.cpp
+tbl.o: ./tbl.cpp
 	$(CXX) -c -o $@ $(GRID_CXXFLAGS) $(CPPDEPS) $<
 
 .PHONY: all install uninstall clean

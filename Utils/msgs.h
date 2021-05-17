@@ -7,7 +7,6 @@
 #include "macro.h"
 
 
-
 #define FOREACH_MSG(OP) \
     OP(MSGID_UNK,              0) \
     OP(MSGID_LOGIN,            sizeof(BodyLogin_t)) \
@@ -19,6 +18,7 @@
     OP(MSGID_LOCATION,         sizeof(BodyLocation_t)) \
     OP(MSGID_TIME,             sizeof(BodyTime_t)) \
     OP(MSGID_PLAYBACK,         sizeof(BodyPlayback_t)) \
+    OP(MSGID_TABLE,            sizeof(BodyTable_t)) \
     OP(MSGID_MAX,              0)
 
 
@@ -152,6 +152,7 @@ typedef struct BodyLocation_s
 #pragma pack(1)
 typedef struct BodyTime_s
 {
+    // Uses the time in the header
 } BodyTime_t;
 #pragma pack(0)
 
@@ -165,6 +166,7 @@ typedef enum {
     PLAYBACK_LOAD   = 6,  // Load a new file
     PLAYBACK_STAT   = 7,  // Report status (file, location, ...)
     PLAYBACK_GOTO   = 8,  // Goto record n
+    PLAYBACK_TABLE  = 9,  // Table commands
 } PlaybackCmd_e;
 
 
@@ -176,6 +178,47 @@ typedef struct BodyPlayback_s
     uint32_t       arg;      // Various uses
     char           fn[256];  // filename of file to playback
 } BodyPlayback_t;
+#pragma pack(0)
+
+typedef enum {
+    TABLE_CLEAR   = 0,  // Clear all columns
+    TABLE_DELETE  = 1,  // Delete on column
+    TABLE_ASSIGN  = 2,  // Assign a variable to a column
+} TableCmd_e;
+
+typedef enum {
+    VARTYPE_DOUBLE   = 0,
+    VARTYPE_FLOAT    = 1,
+    VARTYPE_INT8     = 2,
+    VARTYPE_UINT8    = 3,
+    VARTYPE_INT16    = 4,
+    VARTYPE_UINT16   = 5,
+    VARTYPE_INT32    = 6,
+    VARTYPE_UINT32   = 7,
+    VARTYPE_INT64    = 8,
+    VARTYPE_UINT64   = 9,
+    VARTYPE_STRING   = 10
+} VarType_e;
+
+typedef struct VarTable_Entry_s
+{
+    uint16_t       col;           // Column to operate on
+    MsgId_t        msgId;         // Message identifier (uin16_t)
+    VarType_e      varType;       // Type of variable (float, int, ..)
+    uint8_t        varValidBits;  // Number of LSB bits that are valid
+    uint8_t        varByteOffset; // Offset in bytes from start of body
+    uint8_t        varBitOffset;  // Number of bits to shift right
+    char           name[256];     // Variable name
+    char           format[16];    // Format
+} VarTableEntry_t;
+
+
+#pragma pack(1)
+typedef struct BodyTable_s
+{
+    TableCmd_e      cmd;           // Playback command (Enumeration)
+    VarTableEntry_t entry;    // A structure of all the things needed to place a number 
+} BodyTable_t;
 #pragma pack(0)
 
 
@@ -198,6 +241,7 @@ typedef union Body_s
     BodyVideoConfig_t videoConfig;
     BodyLocation_t    location;
     BodyPlayback_t    playback;
+    BodyTable_t       table;
     BodyGeneric_t     generic;
 } Body_t;
 #pragma pack(0)

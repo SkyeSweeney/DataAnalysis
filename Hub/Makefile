@@ -14,3 +14,6 @@ hub.o: hub.cpp ../Utils/msgs.h ../Utils/nodes.h
 clean:
 	rm -f *.o
 	rm -f hub
+
+install:
+	cp hub ../bin/.
