@@ -11,6 +11,7 @@
 #define MAX_REGISTERED_MSGS 30
 
 #define FOREACH_NODE(OP)       \
+        OP(NODE_HUB,       0)  \
         OP(NODE_NONE,      0)  \
         OP(NODE_CMD,       0)  \
         OP(NODE_VIDEO,     0)  \

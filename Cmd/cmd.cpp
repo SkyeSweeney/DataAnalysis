@@ -46,7 +46,7 @@ uint32_t run = 0;
 // ----------------------------------------------------------------------------
 
 
-wxDEFINE_EVENT(LOG_EVENT, wxCommandEvent);
+wxDEFINE_EVENT(MESSAGE_EVENT, wxCommandEvent);
 
 
 wxIMPLEMENT_APP(GridApp);
@@ -78,7 +78,7 @@ wxBEGIN_EVENT_TABLE( GridFrame, wxFrame )
     EVT_GRID_CELL_LEFT_CLICK( GridFrame::OnCellLeftClick )
     EVT_GRID_SELECT_CELL( GridFrame::OnSelectCell )
     EVT_GRID_RANGE_SELECT( GridFrame::OnRangeSelected )
-    EVT_COMMAND(wxID_ANY, LOG_EVENT, GridFrame::logEvent)
+    EVT_COMMAND(wxID_ANY, MESSAGE_EVENT, GridFrame::OnMessageEvent)
 
 wxEND_EVENT_TABLE()
 
@@ -89,7 +89,7 @@ wxEND_EVENT_TABLE()
 GridFrame::GridFrame()
         : wxFrame( (wxFrame *)NULL, 
                    wxID_ANY, 
-                   "Data Analysis",
+                   "CMD",
                    wxDefaultPosition,
                    wxDefaultSize )
 {
@@ -192,10 +192,13 @@ GridFrame::GridFrame()
     m_pHubIf->client_init();
     m_pHubIf->login(NODE_CMD);
 
-    // Register callback for the Log message
-    std::function<void(Msg_t*)> pCbLog;
-    pCbLog = std::bind(&GridFrame::cbLog, this, _1);
-    m_pHubIf->registerCb(MSGID_LOG, pCbLog);
+    // Setup a callback to receive messages
+    std::function<void(Msg_t*)> pCbMessages;
+    pCbMessages = std::bind(&GridFrame::cbMessages, this, _1);
+
+    // Register callback for the desired messages
+    m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
+    m_pHubIf->registerCb(MSGID_PING, pCbMessages);
 
 
     // Center on screen
@@ -213,14 +216,15 @@ GridFrame::~GridFrame()
 
 
 //**********************************************************************
-// Process log message
+// Process messages
 //**********************************************************************
-void GridFrame::cbLog(Msg_t *pMsg)
+void GridFrame::cbMessages(Msg_t *pMsg)
 {
+    printf("CB\n");
     // This is called from a different context.
     // Must send a message to be picked uo by main loop
     // Must package the string and level
-    wxCommandEvent evt(LOG_EVENT);
+    wxCommandEvent evt(MESSAGE_EVENT);
 
     // Attach message as clientData to event
     Msg_t *msg;
@@ -235,18 +239,28 @@ void GridFrame::cbLog(Msg_t *pMsg)
 //**********************************************************************
 //
 //**********************************************************************
-void GridFrame::logEvent(wxCommandEvent & evt)
+void GridFrame::OnMessageEvent(wxCommandEvent & evt)
 {
     Msg_t *pMsg;
 
     // Get the message from the client data
     pMsg = (Msg_t *)evt.GetClientData();
 
-    // TODO Extract the level and string
-    this->addRecord("aaa", 
-                    "bbb", 
-                    (LogType_e)pMsg->body.log.level,
-                    pMsg->body.log.string);
+    switch (pMsg->hdr.msgId)
+    {
+        case MSGID_LOG:
+
+            // TODO Extract the level and string
+            this->addRecord("aaa", 
+                            "bbb", 
+                            (LogType_e)pMsg->body.log.level,
+                            pMsg->body.log.string);
+            break;
+
+        case MSGID_PING:
+            printf("Ping\n");
+            break;
+    }
 
     delete pMsg;
 }

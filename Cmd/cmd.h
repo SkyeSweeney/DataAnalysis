@@ -50,10 +50,10 @@ private:
     void     LogDbg(const char *str);
     void     LogCmd(const char *str);
 
-    void logEvent(wxCommandEvent & evt);
+    void OnMessageEvent(wxCommandEvent & evt);
 
 
-    void cbLog(Msg_t *pMsg);
+    void cbMessages(Msg_t *pMsg);
     void addRecord(const char *sim, 
                    const char *wall, 
                    LogType_e logType, 

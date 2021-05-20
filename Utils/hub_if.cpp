@@ -285,7 +285,7 @@ static void * receiverThread(void *arg)
         }
 
         // Check header
-        if (msg.hdr.SOM != 0x534B)
+        if (msg.hdr.SOM != MSG_SOM)
         {
             printf("Bad SOM in header\n");
             break;
@@ -294,28 +294,34 @@ static void * receiverThread(void *arg)
         // Get the message ID and size
         msgId = msg.hdr.msgId;
         n = msg.hdr.length;
+        printf("len %d\n", n);
 
-        // Read body
-        got = read(sockFd, (void*)&msg.body, n);
+        if (n > 0)
+        {
 
-        if (got == -1)
-        {
-            printf("Error on body read %d %d\n", errno, sockFd);
-            break;
-        }
-        else if (got == 0)
-        {
-            printf("EOF on read of body\n");
-            break;
-        }
-        else if (got == n)
-        {
-            // Life is good
-        }
-        else
-        {
-            printf("Bad size on body read\n");
-            break;
+            // Read body
+            got = read(sockFd, (void*)&msg.body, n);
+
+            if (got == -1)
+            {
+                printf("Error on body read %d %d\n", errno, sockFd);
+                break;
+            }
+            else if (got == 0)
+            {
+                printf("EOF on read of body\n");
+                break;
+            }
+            else if (got == n)
+            {
+                // Life is good
+            }
+            else
+            {
+                printf("Bad size on body read\n");
+                break;
+            }
+
         }
 
         // If a valid message id
@@ -331,6 +337,8 @@ static void * receiverThread(void *arg)
         }
 
     }
+
+    printf("Receiver thread terminated.\n");
 
     return NULL;
 

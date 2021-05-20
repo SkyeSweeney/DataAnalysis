@@ -19,6 +19,7 @@
     OP(MSGID_TIME,             sizeof(BodyTime_t)) \
     OP(MSGID_PLAYBACK,         sizeof(BodyPlayback_t)) \
     OP(MSGID_TABLE,            sizeof(BodyTable_t)) \
+    OP(MSGID_PING,             0) \
     OP(MSGID_MAX,              0)
 
 

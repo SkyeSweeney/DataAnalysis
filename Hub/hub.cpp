@@ -1,3 +1,8 @@
+//**********************************************************************
+//
+//
+//
+//**********************************************************************
 
 
 #include <sys/socket.h>
@@ -25,6 +30,7 @@
 
 static void *nodeThread(void *arg);
 static void *userThread(void *parg);
+static void *pingThread(void *parg);
 static void processMsg(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogin(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
@@ -53,6 +59,10 @@ int main(int argc, char *argv[])
     // Start the user interface thread
     pthread_t userThreadId;
     pthread_create(&userThreadId, NULL, userThread, NULL);
+
+    // Start the ping interface thread
+    pthread_t pingThreadId;
+    pthread_create(&pingThreadId, NULL, pingThread, NULL);
 
     // Open up TCP listen socket
     hubSd = socket(AF_INET, SOCK_STREAM, 0);
@@ -121,6 +131,61 @@ int main(int argc, char *argv[])
     // Kill background thread
     m_run = false;
 
+}
+
+//**********************************************************************
+// Thread to process pings
+//**********************************************************************
+static void *pingThread(void *parg)
+{
+
+    int i;
+    Node_t  *pNode;
+    Msg_t   msg;
+    ssize_t    numBytes;
+
+    msg.hdr.SOM    = MSG_SOM;
+    msg.hdr.msgId  = MSGID_PING;
+    msg.hdr.source = NODE_HUB;
+    msg.hdr.length = 0;
+    msg.hdr.sec    = 0x01234567;
+    msg.hdr.nsec   = 0x89abcdef;
+
+    printf("Start\n");
+
+    while (m_run)
+    {
+        printf("S\n");
+
+        // Sleep for a second
+        sleep(1);
+
+        // For each possible node
+        for (i=0; i<NODE_MAX; i++)
+        {
+            // Get pointer to node
+            pNode = nodeGet(i);
+            {
+
+                // If not is active
+                if (pNode->sd != -1) 
+                {
+                    printf("P\n");
+                    // Send the message
+                    numBytes = send(pNode->sd, &msg, sizeof(MsgHeader_t), 0);
+                    if (numBytes == -1)
+                    {
+                        printf("Cant ping node\n");
+                        // Close down node
+                        //deleteNode(i);
+                    }
+                }
+            }
+            nodeRelease(i);
+        }
+    }
+
+    return NULL;
 }
 
 
@@ -208,6 +273,10 @@ static void *userThread(void *parg)
         free(pCmdBuf);
 
     }
+
+    // Stop other threads
+    m_run = false;
+
     return NULL;
 }
 
@@ -239,6 +308,8 @@ static void *nodeThread(void *parg)
 
         // Read the next header into the message buffer
         n = read(sd, (void*)(&msg.hdr), sizeof(MsgHeader_t));
+
+        printf("H\n");
         
         if (n == 0)
         {
@@ -251,7 +322,7 @@ static void *nodeThread(void *parg)
         }
 
         // Verify header
-        if (msg.hdr.SOM != 0x534b)
+        if (msg.hdr.SOM != MSG_SOM)
         {
             // Flush buffer and hope for the best
             continue;
@@ -353,7 +424,7 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
                         {
 
                             // Attempt to send message
-                            //printf("Sending\n");
+                            printf("Sending\n");
                             ok = send(pNode->sd, pMsg, len+sizeof(MsgHeader_t), 0);
     
                             // If it failed, nuke the node
