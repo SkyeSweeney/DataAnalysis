@@ -5,6 +5,8 @@
 # =========================================================================
 
 
+all: cmd
+
 
 # -------------------------------------------------------------------------
 # These are configurable options:
@@ -38,13 +40,6 @@ WX_UNICODE ?= $(shell $(WX_CONFIG) --query-chartype | sed 's/unicode/1/;s/ansi/0
 WX_VERSION ?= $(shell $(WX_CONFIG) --query-version | sed -e 's/\([0-9]*\)\.\([0-9]*\)/\1\2/')
 
 
-
-# -------------------------------------------------------------------------
-# Do not modify the rest of this file!
-# -------------------------------------------------------------------------
-
-### Variables: ###
-
 CPPDEPS = -MT$@ -MF`echo $@ | sed -e 's,\.o$$,.d,'` -MD -MP
 WX_VERSION_MAJOR = $(shell echo $(WX_VERSION) | cut -c1,1)
 WX_VERSION_MINOR = $(shell echo $(WX_VERSION) | cut -c2,2)
@@ -53,7 +48,7 @@ WX_CONFIG_FLAGS = $(WX_CONFIG_UNICODE_FLAG) $(WX_CONFIG_SHARED_FLAG) \
 GRID_CXXFLAGS = -I. `$(WX_CONFIG) --cxxflags $(WX_CONFIG_FLAGS)` $(CPPFLAGS) \
 	$(CXXFLAGS)
 GRID_OBJECTS =  \
-	cmd.o
+	cmd.o CommonStatus.o
 
 ### Conditionally set variables: ###
 
@@ -73,7 +68,7 @@ endif
 
 ### Targets: ###
 
-all: test_for_selected_wxbuild cmd
+all: cmd
 
 install: 
 	cp cmd ../bin/.
@@ -85,13 +80,13 @@ clean:
 	rm -f ./*.d
 	rm -f cmd
 
-test_for_selected_wxbuild: 
-	@$(WX_CONFIG) $(WX_CONFIG_FLAGS)
-
 cmd: $(GRID_OBJECTS)
 	$(CXX) -o $@ $(GRID_OBJECTS)   $(LDFLAGS)  `$(WX_CONFIG) $(WX_CONFIG_FLAGS) --libs core,base`
 
 cmd.o: ./cmd.cpp
+	$(CXX) -c -o $@ $(GRID_CXXFLAGS) $(CPPDEPS) $<
+
+CommonStatus.o: ./CommonStatus.cpp
 	$(CXX) -c -o $@ $(GRID_CXXFLAGS) $(CPPDEPS) $<
 
 .PHONY: all install uninstall clean

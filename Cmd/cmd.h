@@ -14,6 +14,7 @@
 
 #include <msgs.h>
 #include <hub_if.h>
+#include "CommonStatus.h"
 
 class wxGrid;
 
@@ -54,6 +55,7 @@ private:
 
 
     void cbMessages(Msg_t *pMsg);
+    void cbStatus(bool ok);
     void addRecord(const char *sim, 
                    const char *wall, 
                    LogType_e logType, 
@@ -77,6 +79,7 @@ public:
 
     enum
     {
+#if 0
         ID_TOGGLEROWLABELS = 100,
         ID_TOGGLECOLLABELS,
         ID_TOGGLEEDIT,
@@ -167,10 +170,12 @@ public:
         ID_RENDER_COORDS,
         ID_RENDER_ZOOM,
         ID_RENDER_MARGIN,
+#endif
         ID_RENDER_DEFAULT_SIZE,
     };
 
     wxLog *m_logOld;
+    CommonStatus *m_pStatus;
 
 
     wxDECLARE_EVENT_TABLE();

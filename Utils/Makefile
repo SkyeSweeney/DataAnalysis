@@ -22,8 +22,8 @@ clean:
 	rm -f *.o
 	rm -f mkIndex
 	rm -f mkSample
-	rm -r sample.log
-	rm -r sample.index
+	rm -f sample.log
+	rm -f sample.index
 
 install:
 	cp mkSample ../bin/.

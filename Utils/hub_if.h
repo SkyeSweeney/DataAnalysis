@@ -26,17 +26,27 @@ class HubIf
         int logout(NodeId_t nodeId);
         
         int registerCb(MsgId_t msgid, std::function<void(Msg_t*)>cb);
+
+        void registerStatus(std::function<void(bool ok)>cb);
         
         int unregisterCb(MsgId_t msgid);
         
         int sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec);
 
+        void shutdown(void);
+
         std::function<void(Msg_t*)> m_callbacks[MSGID_MAX];
+
+        std::function<void(bool ok)> m_statusCb;
+
+    public:    
+        bool      m_run;
+        int       m_sockFd;
 
     private:
 
-        int       m_sockFd;
-        pthread_t m_thread_id;
+        bool      m_debug;
+        pthread_t m_connectionThread_id;
         NodeId_t  m_nodeId = NODE_NONE;
 
 

@@ -35,6 +35,7 @@
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
+#include "CommonStatus.h"
 
 using namespace std::placeholders; // for `_1`
 
@@ -144,12 +145,10 @@ GridFrame::GridFrame()
                              wxTE_PROCESS_ENTER );
 
     // Create the status bar
-    CreateStatusBar(3);
-    SetStatusText("aaaa", 0);
-    SetStatusText("bbbb", 1);
-    SetStatusText("cccc", 2);
-    int widths[3] = {100,100,100};
-    SetStatusWidths(3, widths);
+    m_pStatus = new CommonStatus(this);
+    m_pStatus->setTime((char *)"Time");
+    m_pStatus->setApp((char *)"App");
+    m_pStatus->setConnection(true);
 
     // this will create a grid and, by default, an associated grid
     // table for strings
@@ -189,7 +188,18 @@ GridFrame::GridFrame()
 
     // Create a new hub interface
     m_pHubIf = new HubIf();
+    
+    // Initialize the system
     m_pHubIf->client_init();
+
+    // Register callback for connection status change
+
+    // Setup a callback to receive messages
+    std::function<void(bool ok)> pStatusCb;
+    pStatusCb = std::bind(&GridFrame::cbStatus, this, _1);
+    m_pHubIf->registerStatus(pStatusCb);
+
+    // Login to hub
     m_pHubIf->login(NODE_CMD);
 
     // Setup a callback to receive messages
@@ -212,6 +222,15 @@ GridFrame::GridFrame()
 GridFrame::~GridFrame()
 {
     delete wxLog::SetActiveTarget(m_logOld);
+}
+
+//**********************************************************************
+// Process connection status changes
+//**********************************************************************
+void GridFrame::cbStatus(bool ok)
+{
+    printf("Status Change %d\n", ok);
+    m_pStatus->setConnection(ok);
 }
 
 
@@ -242,6 +261,7 @@ void GridFrame::cbMessages(Msg_t *pMsg)
 void GridFrame::OnMessageEvent(wxCommandEvent & evt)
 {
     Msg_t *pMsg;
+    static int aaa = 0;
 
     // Get the message from the client data
     pMsg = (Msg_t *)evt.GetClientData();
@@ -258,6 +278,10 @@ void GridFrame::OnMessageEvent(wxCommandEvent & evt)
             break;
 
         case MSGID_PING:
+            char buf[24];
+            sprintf(buf, "%d", aaa);
+            aaa++;
+            m_pStatus->setTime(buf);
             printf("Ping\n");
             break;
     }
