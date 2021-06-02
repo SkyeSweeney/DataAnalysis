@@ -39,11 +39,12 @@ static ConnectionThreadArgs_t cta;
 //**********************************************************************
 // Constructor
 //**********************************************************************
-HubIf::HubIf()
+HubIf::HubIf(NodeId_t nodeId)
 {
     m_sockFd = -1;
     m_run    = true;
     m_debug  = false;
+    m_nodeId = nodeId;
 }
 
 //**********************************************************************
@@ -192,10 +193,19 @@ static void * connectionThread(void *arg)
             }
         }
 
+        // Attempt to login
+        err = pHubIf->sendMsg(&msg, MSGID_LOGIN, 0, 0);
+        if (err != 0)
+        {
+            printf("Error: Unable to send login message\n");
+            sleep(1);
+        }
+            
 
         // Do for every incomming message
         for (;;)
         {
+            if (err != 0) break;
 
             // Clear the message
             memset(&msg, 0xff, sizeof(msg));
@@ -278,7 +288,7 @@ static void * connectionThread(void *arg)
 
         close(pHubIf->m_sockFd);
         pHubIf->m_sockFd = -1;
-        printf("Receiver thread terminated.\n");
+        printf("Connection closed\n");
 
         // If a defined callback
         if (pHubIf->m_statusCb != NULL)
@@ -288,22 +298,12 @@ static void * connectionThread(void *arg)
 
     } // for each connection
 
+    printf("Receiver thread terminated.\n");
+
     return NULL;
 
 }
 
-
-
-//**********************************************************************
-// Login to the remote hub
-//**********************************************************************
-int HubIf::login(NodeId_t nodeId)
-{
-    Msg_t msg;
-    m_nodeId = nodeId;
-    this->sendMsg(&msg, MSGID_LOGIN, 0, 0);
-    return 0;
-}
 
 //**********************************************************************
 // Logout of the remote hub
@@ -333,8 +333,8 @@ int HubIf::registerCb(MsgId_t msgId, std::function<void(Msg_t*)>cb)
 
         // Send message to hub to have then send us this message
         msg.body.reg.msgId = msgId;
-        msg.body.reg.add   = 1;
         this->sendMsg(&msg, MSGID_REGISTER, 0, 0);
+        printf("Sent registration message\n");
         retval = 0;
     }
     else
@@ -373,9 +373,13 @@ int HubIf::sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
 {
     int err;
 
-    if (m_sockFd < 1) return(0);
+    if (m_sockFd < 1) 
+    {
+        printf("Socket not open yet\n");
+        return(0);
+    }
 
-    // Check for leacal messageId
+    // Check for legal messageId
     if (msgId < MSGID_MAX)
     {
 
@@ -413,6 +417,7 @@ int HubIf::sendMsg(Msg_t *msg, MsgId_e msgId, uint32_t sec, uint32_t nsec)
                    msg->hdr.msgId,
                    sizeof(MsgHeader_t), 
                    msg->hdr.length);
+            err = 0;
         }
     }
     else

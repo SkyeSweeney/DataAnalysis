@@ -18,13 +18,9 @@ void nodesInit(void)
 
 void nodeInit(NodeId_t nodeId)
 {
-    NodeId_t i;
     m_nodes[nodeId].sd = -1;
     m_nodes[nodeId].nodeType = NODE_NONE;
-    for(i=0; i<MAX_REGISTERED_MSGS; i++)
-    {
-        m_nodes[nodeId].msgIds[i] = 0;
-    }
+    m_nodes[nodeId].msgIdVec.clear();
     pthread_mutex_init(&m_nodes[nodeId].mutex, NULL);
 }
 

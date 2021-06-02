@@ -187,28 +187,17 @@ GridFrame::GridFrame()
 
 
     // Create a new hub interface
-    m_pHubIf = new HubIf();
+    m_pHubIf = new HubIf(NODE_CMD);
     
     // Initialize the system
     m_pHubIf->client_init();
 
     // Register callback for connection status change
 
-    // Setup a callback to receive messages
+    // Setup a callback to receive status change
     std::function<void(bool ok)> pStatusCb;
     pStatusCb = std::bind(&GridFrame::cbStatus, this, _1);
     m_pHubIf->registerStatus(pStatusCb);
-
-    // Login to hub
-    m_pHubIf->login(NODE_CMD);
-
-    // Setup a callback to receive messages
-    std::function<void(Msg_t*)> pCbMessages;
-    pCbMessages = std::bind(&GridFrame::cbMessages, this, _1);
-
-    // Register callback for the desired messages
-    m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
-    m_pHubIf->registerCb(MSGID_PING, pCbMessages);
 
 
     // Center on screen
@@ -230,7 +219,21 @@ GridFrame::~GridFrame()
 void GridFrame::cbStatus(bool ok)
 {
     printf("Status Change %d\n", ok);
+
+    // Change the connection status in status bar
     m_pStatus->setConnection(ok);
+
+    if (ok)
+    {
+
+        // Setup a callback to receive generic messages
+        std::function<void(Msg_t*)> pCbMessages;
+        pCbMessages = std::bind(&GridFrame::cbMessages, this, _1);
+
+        // Register callback for the desired messages
+        m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
+        m_pHubIf->registerCb(MSGID_PING, pCbMessages);
+    }
 }
 
 
@@ -239,7 +242,7 @@ void GridFrame::cbStatus(bool ok)
 //**********************************************************************
 void GridFrame::cbMessages(Msg_t *pMsg)
 {
-    printf("CB\n");
+    //printf("CB\n");
     // This is called from a different context.
     // Must send a message to be picked uo by main loop
     // Must package the string and level
@@ -282,7 +285,7 @@ void GridFrame::OnMessageEvent(wxCommandEvent & evt)
             sprintf(buf, "%d", aaa);
             aaa++;
             m_pStatus->setTime(buf);
-            printf("Ping\n");
+            //printf("Ping\n");
             break;
     }
 

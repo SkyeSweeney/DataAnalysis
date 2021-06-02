@@ -37,10 +37,9 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&m_displayMutex, NULL);
     sem_init(&m_cmdSem, 0, 0);
 
-    m_pHubIf = new HubIf();
+    m_pHubIf = new HubIf(NODE_PLAYBACK);
 
     m_pHubIf->client_init();
-    m_pHubIf->login(NODE_PLAYBACK);
 
     m_pHubIf->registerCb(MSGID_PLAYBACK, cbPlayback);
 

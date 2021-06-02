@@ -9,10 +9,11 @@
 
 #define FOREACH_MSG(OP) \
     OP(MSGID_UNK,              0) \
-    OP(MSGID_LOGIN,            sizeof(BodyLogin_t)) \
-    OP(MSGID_LOGOUT,           sizeof(BodyLogout_t)) \
+    OP(MSGID_LOGIN,            0) \
+    OP(MSGID_LOGOUT,           0) \
     OP(MSGID_EXIT,             0) \
     OP(MSGID_REGISTER,         sizeof(BodyRegister_t)) \
+    OP(MSGID_UNREGISTER,       sizeof(BodyRegister_t)) \
     OP(MSGID_LOG,              sizeof(BodyLog_t)) \
     OP(MSGID_VIDEO_CONFIG,     sizeof(BodyVideoConfig_t)) \
     OP(MSGID_LOCATION,         sizeof(BodyLocation_t)) \
@@ -78,13 +79,12 @@ typedef struct BodyLogout_s
 #pragma pack(0)
 
 //**********************************************************************
-// Message to register for a message with hub
+// Message to register/unregister for a message with hub
 //**********************************************************************
 #pragma pack(1)
 typedef struct BodyRegister_s
 {
-    MsgId_t  msgId;  // ID of message to register
-    uint16_t add;    // non zero to register, 0 to unregister
+    MsgId_t  msgId;  // ID of message to register/unregister
 } BodyRegister_t;
 #pragma pack(0)
 

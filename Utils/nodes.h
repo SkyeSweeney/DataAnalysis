@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <vector>
 
 #include "macro.h"
 
@@ -38,10 +39,10 @@ typedef uint16_t NodeId_t;
 // Control structure for a node
 typedef struct
 {
-    int             sd;    // -1 for unused entry
-    NodeType_e      nodeType;
-    uint8_t         msgIds[MAX_REGISTERED_MSGS];  // True to send
-    pthread_mutex_t mutex;
+    int                   sd;        // -1 for unused entry
+    NodeType_e            nodeType;
+    std::vector<NodeId_t> msgIdVec;  // Vector of messages to send
+    pthread_mutex_t       mutex;
 } Node_t;
 
 

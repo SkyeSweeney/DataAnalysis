@@ -43,9 +43,8 @@ bool MyApp::OnInit()
     m_myFrame->Show(true);
 
     // Start the hub interface
-    pHubIf = new HubIf();
+    pHubIf = new HubIf(NODE_VIDEO);
     pHubIf->client_init();
-    pHubIf->login(NODE_VIDEO);
 
     // Register callback for the Time message
     std::function<void(Msg_t*)> pCbTime;

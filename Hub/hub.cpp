@@ -35,6 +35,7 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogin(NodeId_t nodeId, Msg_t *pMsg);
 static void processLogout(NodeId_t nodeId, Msg_t *pMsg);
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg);
+static void processUnregister(NodeId_t nodeId, Msg_t *pMsg);
 static void processExit(NodeId_t nodeId, Msg_t *pMsg);
 
 static bool m_verbose = false;
@@ -155,7 +156,7 @@ static void *pingThread(void *parg)
 
     while (m_run)
     {
-        printf("S\n");
+        //printf("S\n");
 
         // Sleep for a second
         sleep(1);
@@ -170,7 +171,7 @@ static void *pingThread(void *parg)
                 // If not is active
                 if (pNode->sd != -1) 
                 {
-                    printf("P\n");
+                    //printf("P\n");
                     // Send the message
                     numBytes = send(pNode->sd, &msg, sizeof(MsgHeader_t), 0);
                     if (numBytes == -1)
@@ -229,15 +230,25 @@ static void *userThread(void *parg)
         else if (strcasecmp(pTok, "who") == 0)
         {
 
-            printf("| id | sd  | NodeType             |\n");
+            printf("| id | sd  | NodeType             | msgids\n");
             for (i=0; i<NODE_MAX; i++)
             {
                 // Get the socket we are to use
                 pNode = nodeGet(i);
-                printf("| %02d | %03d | %-20s |\n", 
+                char l[64];
+                char t[10];
+                l[0] = 0;
+                for (auto i = pNode->msgIdVec.begin(); i != pNode->msgIdVec.end(); ++i)
+                {
+                    printf("%d\n", *i);
+                    sprintf(t, "%d, ", *i);
+                    strcat(l, t);
+                }
+                printf("| %02d | %03d | %-20s | %s\n", 
                        i, 
                        pNode->sd, 
-                      nodeIdToName(pNode->nodeType));
+                       nodeIdToName(pNode->nodeType),
+                       l);
                 nodeRelease(i);
             }
         }
@@ -309,7 +320,7 @@ static void *nodeThread(void *parg)
         // Read the next header into the message buffer
         n = read(sd, (void*)(&msg.hdr), sizeof(MsgHeader_t));
 
-        printf("H\n");
+        //printf("H\n");
         
         if (n == 0)
         {
@@ -347,6 +358,7 @@ static void *nodeThread(void *parg)
         } // Have body
 
         // Call message processor
+        printf("got msg\n");
         processMsg(nodeId, &msg);
 
     } // loop
@@ -391,6 +403,11 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             processRegister(nodeId, pMsg);
             break; 
 
+        // Node unregistering for a message
+        case MSGID_UNREGISTER:
+            processUnregister(nodeId, pMsg);
+            break; 
+
         // Node registering for a message
         case MSGID_EXIT:
             processExit(nodeId, pMsg);
@@ -402,36 +419,42 @@ static void processMsg(NodeId_t nodeId, Msg_t *pMsg)
             // If msgId is legal
             if (msgId < MSGID_MAX)
             {
-                if (m_verbose)
-                {
-                    printf("Message to route %s (%d)\n", 
-                            MSG_STRING[msgId],
-                            msgId);
-                }
 
                 // For each node 
                 for (nodeId=0; nodeId<NODE_MAX; nodeId++)
                 {
 
+                    // Get pointer to node structure
                     pNode = nodeGet(nodeId);
 
                     // If a defined node
                     if (pNode->sd != -1)
                     {
 
-                        // If is to be sent
-                        if (pNode->msgIds[msgId])
+                        // do for each message this node supports
+                        for (auto i = pNode->msgIdVec.begin(); i != pNode->msgIdVec.end(); ++i)
                         {
-
-                            // Attempt to send message
-                            printf("Sending\n");
-                            ok = send(pNode->sd, pMsg, len+sizeof(MsgHeader_t), 0);
-    
-                            // If it failed, nuke the node
-                            if (ok != 0)
+                            // If this message matches
+                            if (*i == msgId)
                             {
-                                // Close down node
-                                //deleteNode(i);
+                                if (m_verbose)
+                                {
+                                    printf("Routing %s to %s\n", 
+                                            MSG_STRING[msgId],
+                                            nodeIdToName(pNode->nodeType));
+                                            
+                                }
+
+                                // Attempt to send message
+                                ok = send(pNode->sd, pMsg, len+sizeof(MsgHeader_t), 0);
+        
+                                // If it failed, nuke the node
+                                if (ok != 0)
+                                {
+                                    // Close down node
+                                    //deleteNode(i);
+                                }
+                                break;
                             }
                         }
                     } // Defined node
@@ -481,14 +504,27 @@ static void processLogout(NodeId_t nodeId, Msg_t *pMsg)
 static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
 {
     MsgId_t msgId;
-    uint16_t add;
     Node_t *pNode;
 
     msgId = pMsg->body.reg.msgId;
-    add   = pMsg->body.reg.add;
     pNode = nodeGet(nodeId);
-    printf("Register %d %d\n", msgId, add);
-    pNode->msgIds[msgId] = add;
+    printf("Register %d\n", msgId);
+    pNode->msgIdVec.push_back(msgId);
+    nodeRelease(nodeId);
+}
+
+//**********************************************************************
+//
+//**********************************************************************
+static void processUnregister(NodeId_t nodeId, Msg_t *pMsg)
+{
+    MsgId_t msgId;
+    Node_t *pNode;
+
+    msgId = pMsg->body.reg.msgId;
+    pNode = nodeGet(nodeId);
+    printf("Unregister %d NOT IMPLEMENTED\n", msgId);
+    // TODO
     nodeRelease(nodeId);
 }
 

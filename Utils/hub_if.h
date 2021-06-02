@@ -15,14 +15,12 @@ class HubIf
 
     public:
 
-        HubIf();
+        HubIf(NodeId_t nodeId);
 
         ~HubIf();
 
         int client_init(void);
 
-        int login(NodeId_t nodeId);
-      
         int logout(NodeId_t nodeId);
         
         int registerCb(MsgId_t msgid, std::function<void(Msg_t*)>cb);

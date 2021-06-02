@@ -170,9 +170,8 @@ GridFrame::GridFrame()
 
 
     // Create a new hub interface
-    m_pHubIf = new HubIf();
+    m_pHubIf = new HubIf(NODE_CMD);
     m_pHubIf->client_init();
-    m_pHubIf->login(NODE_CMD);
 
     // Register callback for various messages
     std::function<void(Msg_t*)> pCbMsg;
