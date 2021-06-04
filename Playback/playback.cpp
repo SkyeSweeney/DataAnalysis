@@ -5,13 +5,18 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
+#include <functional>
 
 
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
 
+using namespace std::placeholders; // for `_1`
+
+
 static void cbPlayback(Msg_t *pMsg);
+static void cbStatus(bool ok);
 static void *playbackThread(void *pargs);
 static void processCmd(void);
 
@@ -37,11 +42,18 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&m_displayMutex, NULL);
     sem_init(&m_cmdSem, 0, 0);
 
+    // Create a new hub interface
     m_pHubIf = new HubIf(NODE_PLAYBACK);
 
+    // Initialize the hub
     m_pHubIf->client_init();
 
-    m_pHubIf->registerCb(MSGID_PLAYBACK, cbPlayback);
+    // Setup a callback to receive status change
+    std::function<void(bool ok)> pStatusCb;
+    pStatusCb = std::bind(cbStatus, _1);
+    m_pHubIf->registerStatus(pStatusCb);
+
+
 
     pthread_create(&m_playbackThread, NULL, playbackThread, NULL);
     
@@ -67,6 +79,19 @@ void cbPlayback(Msg_t *pMsg)
     // Signal we got a new command
     sem_post(&m_cmdSem);
 
+}
+
+//**********************************************************************
+// Callback for a connection status changes
+//**********************************************************************
+void cbStatus(bool ok)
+{
+    printf("Changed status %d\n", ok);
+
+    if (ok)
+    {
+        m_pHubIf->registerCb(MSGID_PLAYBACK, cbPlayback);
+    }
 }
 
 
