@@ -8,11 +8,14 @@
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
+#include "CommonStatus.h"
+
 
 using namespace std;
 using namespace std::placeholders; // for `_1`
 
-wxDEFINE_EVENT(TIME_EVENT, wxCommandEvent);
+wxDEFINE_EVENT(MESSAGE_EVENT, wxCommandEvent);
+wxDEFINE_EVENT(STATUS_EVENT,  wxCommandEvent);
 
 
 
@@ -26,8 +29,6 @@ wxDEFINE_EVENT(TIME_EVENT, wxCommandEvent);
 //**********************************************************************
 bool MyApp::OnInit()
 {
-    MyImagePanel * pMyImagePanel;
-    HubIf *pHubIf;
 
     // Make sure to call this first to be able to understand all
     // the different image formats
@@ -37,28 +38,15 @@ bool MyApp::OnInit()
     m_myFrame = new MyFrame(wxT("Data Analysis - Video"));
 
     // Get pointer to panel
-    pMyImagePanel = m_myFrame->getMyImagePanel();
+    m_pMyImagePanel = m_myFrame->getMyImagePanel();
     
     // Show it
     m_myFrame->Show(true);
 
-    // Start the hub interface
-    pHubIf = new HubIf(NODE_VIDEO);
-    pHubIf->client_init();
-
-    // Register callback for the Time message
-    std::function<void(Msg_t*)> pCbTime;
-    pCbTime = std::bind(&MyImagePanel::cbTime, pMyImagePanel, _1);
-    pHubIf->registerCb(MSGID_TIME, pCbTime);
-
-    // Register callback for the VideoConfig message
-    std::function<void(Msg_t*)> pCbVideoConfig;
-    pCbVideoConfig = std::bind(&MyImagePanel::cbVideoConfig, pMyImagePanel, _1);
-    pHubIf->registerCb(MSGID_VIDEO_CONFIG, pCbVideoConfig);
-
     // Worked!
     return true;
 }  
+
 
 
 
@@ -112,13 +100,8 @@ MyFrame::MyFrame(const wxString& title)
     // ... and attach this menu bar to the frame
     SetMenuBar(m_menuBar);
 
-    // Create a status bar just for fun
-    CreateStatusBar(2);
-    SetStatusText(wxT("NO SYNC"), 0);
-
     // Create an image panel
     m_myImagePanel = new MyImagePanel(this, wxBITMAP_TYPE_PNG);
-
 
     // Text for time
     m_timeTxt = new wxTextCtrl(this, 
@@ -139,12 +122,26 @@ MyFrame::MyFrame(const wxString& title)
     }    
     SetSizer(sizer);
 
+    // Create the status bar
+    m_pStatus = new CommonStatus(this);
+    m_pStatus->setTime((char *)"Time");
+    m_pStatus->setApp((char *)"App");
+    m_pStatus->setConnection(true);
+
     // Set position of window
     wxPoint pos(440,40);
     this->SetPosition(pos);
 
-}
+    // Start the hub interface
+    m_pHubIf = new HubIf(NODE_VIDEO);
+    m_pHubIf->client_init();
 
+    // Setup a callback to receive status change
+    std::function<void(bool ok)> pStatusCb;
+    pStatusCb = std::bind(&MyImagePanel::cbStatus, m_myImagePanel, _1);
+    m_pHubIf->registerStatus(pStatusCb);
+
+}
 
 
 
@@ -200,7 +197,8 @@ BEGIN_EVENT_TABLE(MyImagePanel, wxPanel)
     
     // catch paint events
     EVT_PAINT(MyImagePanel::OnPaint)
-    EVT_COMMAND(wxID_ANY, TIME_EVENT, MyImagePanel::OnTime)
+    EVT_COMMAND(wxID_ANY, MESSAGE_EVENT, MyImagePanel::OnMessage)
+    EVT_COMMAND(wxID_ANY, STATUS_EVENT,  MyImagePanel::OnStatus)
 
 END_EVENT_TABLE()
 
@@ -238,12 +236,67 @@ void MyImagePanel::OnPaint(wxPaintEvent & evt)
 }
 
 //**********************************************************************
-// Called by wxWidgets when the panel needs to be redrawn. 
-// You can also trigger this call by calling Refresh()/Update().
+// Called by wxWidgets when a connection status change occurs
 //**********************************************************************
-void MyImagePanel::OnTime(wxCommandEvent & evt)
+void MyImagePanel::OnStatus(wxCommandEvent & evt)
+{
+    int state;
+
+    // Get the status
+    state = evt.GetInt();
+
+    // Change the connection status in status bar
+    m_parent->m_pStatus->setConnection(state?true:false);
+
+
+}
+
+//**********************************************************************
+// Called by wxWidgets when a new message has arrived
+//**********************************************************************
+void MyImagePanel::OnMessage(wxCommandEvent & evt)
 {
     Msg_t   *pMsg;
+
+    // Get the message
+    pMsg = (Msg_t *)evt.GetClientData();
+
+
+    switch (pMsg->hdr.msgId)
+    {
+        case MSGID_TIME:
+            processTime(pMsg);
+            break;
+
+        case MSGID_VIDEO_CONFIG:
+            processVideoConfig(pMsg);
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+//**********************************************************************
+//**********************************************************************
+void MyImagePanel::processVideoConfig(Msg_t *pMsg)
+{
+    // Put message data into memory
+    m_videoSync = pMsg->body.videoConfig.videoSync;
+
+    printf("Got a VideoConfig %u %u %u\n", 
+            m_videoSync.sec, 
+            m_videoSync.nsec, 
+            m_videoSync.frame);
+
+    m_parent->SetStatusText(wxT("SYNC"), 0);
+}
+
+//**********************************************************************
+//**********************************************************************
+void MyImagePanel::processTime(Msg_t *pMsg)
+{
     char     buf[300];
     bool     ok;
     uint32_t sec, nsec;
@@ -251,9 +304,6 @@ void MyImagePanel::OnTime(wxCommandEvent & evt)
     double   fsec;
     uint32_t sn;
     static uint32_t n=0;
-
-    // Get the message
-    pMsg = (Msg_t *)evt.GetClientData();
 
     // Put message data into memory
     sec   =  pMsg->hdr.sec;
@@ -344,11 +394,36 @@ void MyImagePanel::render(wxDC&  dc)
 }
 
 //**********************************************************************
-// Callback for a TIME message
+// Get status changes
 //**********************************************************************
-void MyImagePanel::cbTime(Msg_t *pMsg)
+void MyImagePanel::cbStatus(bool ok)
 {
-    wxCommandEvent evt(TIME_EVENT);
+    printf("Status change %d\n", ok);
+
+    wxCommandEvent evt(STATUS_EVENT);
+    evt.SetInt(ok?1:0);
+    wxPostEvent(this, evt);
+
+    if (ok)
+    {
+
+        // Setup a callback to receive generic messages
+        std::function<void(Msg_t*)> pCbMessages;
+        pCbMessages = std::bind(&MyImagePanel::cbMessages, this, _1);
+
+        // Register callback for the desired messages
+        m_parent->m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
+        m_parent->m_pHubIf->registerCb(MSGID_PING, pCbMessages);
+    }
+}
+
+
+//**********************************************************************
+// Callback for generic messages
+//**********************************************************************
+void MyImagePanel::cbMessages(Msg_t *pMsg)
+{
+    wxCommandEvent evt(MESSAGE_EVENT);
     Msg_t *msg;
 
     // Send the message via event to the main loop.
@@ -358,27 +433,8 @@ void MyImagePanel::cbTime(Msg_t *pMsg)
     evt.SetClientData(msg);
 
     wxPostEvent(this, evt);
-}
-
-
-//**********************************************************************
-// Callback for VIDEO CONFIG message
-//**********************************************************************
-void MyImagePanel::cbVideoConfig(Msg_t *pMsg)
-{
-    // Put message data into memory
-    m_videoSync = pMsg->body.videoConfig.videoSync;
-
-    printf("Got a VideoConfig %u %u %u\n", 
-            m_videoSync.sec, 
-            m_videoSync.nsec, 
-            m_videoSync.frame);
-
-    m_parent->SetStatusText(wxT("SYNC"), 0);
 
 }
-
-
 
 
 // some useful events

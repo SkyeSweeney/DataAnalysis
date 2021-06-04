@@ -14,6 +14,8 @@
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
+#include "CommonStatus.h"
+
 
 
 class MyImagePanel;
@@ -31,6 +33,8 @@ private:
 
 public:
     bool OnInit();
+
+    MyImagePanel *m_pMyImagePanel;
 
 };
 
@@ -50,12 +54,16 @@ public:
     MyImagePanel(wxFrame* parent, wxBitmapType format);
     
     void OnPaint(wxPaintEvent & evt);
-    void OnTime(wxCommandEvent & evt);
+    void OnMessage(wxCommandEvent & evt);
+    void OnStatus(wxCommandEvent & evt);
     void paintNow();
     void render(wxDC& dc);
     void setFrame(uint32_t sn);
-    void cbTime(Msg_t *pMsg);
-    void cbVideoConfig(Msg_t *pMsg);
+    void processTime(Msg_t *pMsg);
+    void processVideoConfig(Msg_t *pMsg);
+    void cbStatus(bool ok);
+    void cbMessages(Msg_t *pMsg);
+
 
     
     // some useful events
@@ -94,10 +102,13 @@ public:
     // Event handlers
     void OnQuit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
+    void cbStatus(bool ok);
 
     MyImagePanel *getMyImagePanel(void);
 
     wxTextCtrl   *m_timeTxt;
+    CommonStatus *m_pStatus;
+    HubIf        *m_pHubIf;
 
 private:
     MyImagePanel *m_myImagePanel;

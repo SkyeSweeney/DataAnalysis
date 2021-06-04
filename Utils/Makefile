@@ -2,7 +2,7 @@
 CXXFLAGS = -g -Wall -std=c++11
 
 
-all: mkSample mkIndex hub_if.o nodes.o
+all: mkSample mkIndex hub_if.o nodes.o CommonStatus.o
 
 
 mkSample: mkSample.cpp msgs.h
@@ -16,6 +16,9 @@ hub_if.o: hub_if.cpp msgs.h nodes.h
 
 nodes.o: nodes.cpp nodes.h
 	g++ ${CXXFLAGS} -c nodes.cpp
+
+CommonStatus.o: CommonStatus.cpp CommonStatus.h
+	g++ ${CXXFLAGS} -c `wx-config --cxxflags` CommonStatus.cpp
 
 
 clean:
