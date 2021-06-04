@@ -412,8 +412,9 @@ void MyImagePanel::cbStatus(bool ok)
         pCbMessages = std::bind(&MyImagePanel::cbMessages, this, _1);
 
         // Register callback for the desired messages
-        m_parent->m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
-        m_parent->m_pHubIf->registerCb(MSGID_PING, pCbMessages);
+        m_parent->m_pHubIf->registerCb(MSGID_TIME,         pCbMessages);
+        m_parent->m_pHubIf->registerCb(MSGID_VIDEO_CONFIG, pCbMessages);
+
     }
 }
 

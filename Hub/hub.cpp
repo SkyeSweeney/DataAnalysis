@@ -235,13 +235,12 @@ static void *userThread(void *parg)
             {
                 // Get the socket we are to use
                 pNode = nodeGet(i);
-                char l[64];
-                char t[10];
+                char l[1024];
+                char t[64];
                 l[0] = 0;
                 for (auto i = pNode->msgIdVec.begin(); i != pNode->msgIdVec.end(); ++i)
                 {
-                    printf("%d\n", *i);
-                    sprintf(t, "%d, ", *i);
+                    sprintf(t, "%s, ", MSG_STRING[*i]);
                     strcat(l, t);
                 }
                 printf("| %02d | %03d | %-20s | %s\n", 
