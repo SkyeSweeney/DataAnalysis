@@ -1,6 +1,6 @@
 //**********************************************************************
 //
-//
+// A very basic publish-subscribe router.
 //
 //**********************************************************************
 
@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
         // Accept connection
         len = sizeof(from);
         nodeSd = accept(hubSd, &from, &len);
-        printf("Got connection from TBD on socket %d\n", nodeSd);
 
         // Find an empty control structure for this node
         nodeId = nodeFindEmpty();
@@ -152,10 +151,10 @@ int main(int argc, char *argv[])
 static void *pingThread(void *parg)
 {
 
-    int i;
+    int      i;
     Node_t  *pNode;
-    Msg_t   msg;
-    ssize_t    numBytes;
+    Msg_t    msg;
+    ssize_t  numBytes;
 
     msg.hdr.SOM    = MSG_SOM;
     msg.hdr.msgId  = MSGID_PING;
@@ -163,8 +162,6 @@ static void *pingThread(void *parg)
     msg.hdr.length = 0;
     msg.hdr.sec    = 0x01234567;
     msg.hdr.nsec   = 0x89abcdef;
-
-    printf("Start\n");
 
     while (m_run)
     {
@@ -176,7 +173,7 @@ static void *pingThread(void *parg)
         // For each possible node
         for (i=0; i<NODE_MAX; i++)
         {
-            // Get pointer to node
+            // Get pointer to node data
             pNode = nodeGet(i);
             {
 
@@ -208,7 +205,7 @@ static void *pingThread(void *parg)
 static void *userThread(void *parg)
 {
 
-    int i;
+    int      i;
     Node_t  *pNode;
     char    *pCmdBuf;
     char    *pTok;
@@ -243,9 +240,11 @@ static void *userThread(void *parg)
         {
 
             printf("| id | sd  | NodeType             | msgids\n");
+
+            // For each node
             for (i=0; i<NODE_MAX; i++)
             {
-                // Get the socket we are to use
+                // Get pointer to node data
                 pNode = nodeGet(i);
                 {
                     char l[1024];
@@ -266,10 +265,18 @@ static void *userThread(void *parg)
             }
 
             // Iterate through all messageIds
+            std::set<NodeId_t> NodeVec;
             std::map<MsgId_t, std::set<NodeId_t> > ::iterator it;
             for(it=m_msgToNode.begin(); it!=m_msgToNode.end(); ++it)
             {
-                std::cout<<it->first<<std::endl;
+                std::cout << "Message " << it->first << std::endl;
+                NodeVec = it->second;
+                std::set<NodeId_t>::iterator it2;
+                for (it2 = NodeVec.begin(); it2 != NodeVec.end(); ++it2) 
+                {
+                    NodeId_t n = *it2; // Note the "*" here
+                    printf("node:%d\n", n);
+                }
             }
 
         }
