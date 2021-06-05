@@ -20,6 +20,11 @@
 #include <readline/history.h>
 #include <pthread.h>
 
+#include <set>
+#include <map>
+#include <iostream>
+#include <ostream>
+
 
 #define USE_MSG_STRING
 #include "msgs.h"
@@ -40,6 +45,9 @@ static void processExit(NodeId_t nodeId, Msg_t *pMsg);
 
 static bool m_verbose = false;
 static bool m_run  = true;
+
+// This maps a message id to a list of nodes
+static std::map<MsgId_t, std::set<NodeId_t> > m_msgToNode;
 
 //**********************************************************************
 //
@@ -250,6 +258,14 @@ static void *userThread(void *parg)
                        l);
                 nodeRelease(i);
             }
+
+            // Iterate through all messageIds
+            std::map<MsgId_t, std::set<NodeId_t> > ::iterator it;
+            for(it=m_msgToNode.begin(); it!=m_msgToNode.end(); ++it)
+            {
+                std::cout<<it->first<<std::endl;
+            }
+
         }
 
         // VERBOSE
@@ -505,10 +521,17 @@ static void processRegister(NodeId_t nodeId, Msg_t *pMsg)
     MsgId_t msgId;
     Node_t *pNode;
 
+    // Get the message if to register
     msgId = pMsg->body.reg.msgId;
+
+    // Add it to the msgToNode list
+    m_msgToNode[msgId].insert(nodeId);
+
     pNode = nodeGet(nodeId);
-    printf("Register %d\n", msgId);
-    pNode->msgIdVec.push_back(msgId);
+    {
+        printf("Register %d\n", msgId);
+        pNode->msgIdVec.push_back(msgId);
+    }
     nodeRelease(nodeId);
 }
 
