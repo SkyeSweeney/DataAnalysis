@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        griddemo.h
+// Name:        tbl.h
 // Purpose:     Grid control wxWidgets sample
 // Author:      Michael Bedward
 // Modified by:
@@ -8,12 +8,14 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef griddemo_h
-#define griddemo_h
+#ifndef __tbl_h__
+#define __tbl_h__
 
 
 #include <msgs.h>
 #include <hub_if.h>
+#include "CommonStatus.h"
+
 
 class wxGrid;
 
@@ -40,7 +42,8 @@ private:
     void msgEvent(wxCommandEvent & evt);
 
 
-    void cbMsg(Msg_t *pMsg);
+    void cbMessages(Msg_t *pMsg);
+    void cbStatus(bool ok);
     void addRecord(const char *sim, 
                    const char *wall, 
                    LogType_e logType, 
@@ -55,6 +58,9 @@ private:
     void OnGridRender( wxCommandEvent& event );
     void OnRenderPaint( wxPaintEvent& event );
 
+    void OnMessageEvent(wxCommandEvent & evt);
+
+
     void processMessage(Msg_t *pMsg);
     void processTable(Msg_t *pMsg);
 
@@ -65,6 +71,8 @@ public:
     ~GridFrame();
 
     wxLog *m_logOld;
+    CommonStatus *m_pStatus;
+
 
     wxDECLARE_EVENT_TABLE();
 };

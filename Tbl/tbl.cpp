@@ -35,6 +35,7 @@
 #include "hub_if.h"
 #include "nodes.h"
 #include "msgs.h"
+#include "CommonStatus.h"
 
 using namespace std::placeholders; // for `_1`
 
@@ -47,7 +48,7 @@ VarTableEntry_t varTable[20];
 // ----------------------------------------------------------------------------
 
 
-wxDEFINE_EVENT(MSG_EVENT, wxCommandEvent);
+wxDEFINE_EVENT(MESSAGE_EVENT, wxCommandEvent);
 
 
 wxIMPLEMENT_APP(GridApp);
@@ -78,7 +79,7 @@ wxBEGIN_EVENT_TABLE( GridFrame, wxFrame )
     EVT_GRID_CELL_LEFT_CLICK( GridFrame::OnCellLeftClick )
     EVT_GRID_SELECT_CELL( GridFrame::OnSelectCell )
     EVT_GRID_RANGE_SELECT( GridFrame::OnRangeSelected )
-    EVT_COMMAND(wxID_ANY, MSG_EVENT, GridFrame::msgEvent)
+    EVT_COMMAND(wxID_ANY, MESSAGE_EVENT, GridFrame::OnMessageEvent)
 
 wxEND_EVENT_TABLE()
 
@@ -135,12 +136,11 @@ GridFrame::GridFrame()
     wxLog::DisableTimestamp();
 
     // Create the status bar
-    CreateStatusBar(3);
-    SetStatusText("aaaa", 0);
-    SetStatusText("bbbb", 1);
-    SetStatusText("cccc", 2);
-    int widths[3] = {100,100,100};
-    SetStatusWidths(3, widths);
+    m_pStatus = new CommonStatus(this);
+    m_pStatus->setTime((char *)"Time");
+    m_pStatus->setApp((char *)"App");
+    m_pStatus->setConnection(true);
+
 
     // this will create a grid and, by default, an associated grid
     // table for strings
@@ -171,13 +171,22 @@ GridFrame::GridFrame()
 
     // Create a new hub interface
     m_pHubIf = new HubIf(NODE_CMD);
+
+    // Initialize the system
     m_pHubIf->client_init();
 
+    // Setup a callback to receive status change
+    std::function<void(bool ok)> pStatusCb;
+    pStatusCb = std::bind(&GridFrame::cbStatus, this, _1);
+    m_pHubIf->registerStatus(pStatusCb);
+
+#if 0    
     // Register callback for various messages
     std::function<void(Msg_t*)> pCbMsg;
     pCbMsg = std::bind(&GridFrame::cbMsg, this, _1);
     m_pHubIf->registerCb(MSGID_LOCATION, pCbMsg);
     m_pHubIf->registerCb(MSGID_TABLE,    pCbMsg);
+#endif
 
     // Center on screen
     Centre();
@@ -192,16 +201,39 @@ GridFrame::~GridFrame()
     delete wxLog::SetActiveTarget(m_logOld);
 }
 
+//**********************************************************************
+// Process connection status changes
+//**********************************************************************
+void GridFrame::cbStatus(bool ok)
+{
+    printf("Status Change %d\n", ok);
+
+    // Change the connection status in status bar
+    m_pStatus->setConnection(ok);
+
+    if (ok)
+    {
+
+        // Setup a callback to receive generic messages
+        std::function<void(Msg_t*)> pCbMessages;
+        pCbMessages = std::bind(&GridFrame::cbMessages, this, _1);
+
+        // Register callback for the desired messages
+        m_pHubIf->registerCb(MSGID_LOG,  pCbMessages);
+        m_pHubIf->registerCb(MSGID_PING, pCbMessages);
+    }
+}
 
 //**********************************************************************
-// Process log message
+// Process messages
 //**********************************************************************
-void GridFrame::cbMsg(Msg_t *pMsg)
+void GridFrame::cbMessages(Msg_t *pMsg)
 {
+    //printf("CB\n");
     // This is called from a different context.
     // Must send a message to be picked uo by main loop
     // Must package the string and level
-    wxCommandEvent evt(MSG_EVENT);
+    wxCommandEvent evt(MESSAGE_EVENT);
 
     // Attach message as clientData to event
     Msg_t *msg;
@@ -212,31 +244,32 @@ void GridFrame::cbMsg(Msg_t *pMsg)
     wxPostEvent(this, evt);
 }
 
-
 //**********************************************************************
 //
 //**********************************************************************
-void GridFrame::msgEvent(wxCommandEvent & evt)
+void GridFrame::OnMessageEvent(wxCommandEvent & evt)
 {
     Msg_t *pMsg;
+    static int aaa = 0;
 
     // Get the message from the client data
     pMsg = (Msg_t *)evt.GetClientData();
 
-    // Process appropriately
     switch (pMsg->hdr.msgId)
     {
         case MSGID_LOCATION:
             processMessage(pMsg);
             break;
+
         case MSGID_TABLE:
             processTable(pMsg);
             break;
+
         default:
             break;
-    }    
 
-    // Delete the message
+    }
+
     delete pMsg;
 }
 
